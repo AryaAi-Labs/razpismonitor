@@ -142,70 +142,66 @@ try:
 
     print(f"e-JN skupaj: {len(all_rows)} vrstic iz vseh strani")
 
-        for row in all_rows:
-            # Izvleči vse celice
-            cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL | re.IGNORECASE)
-            cells = [clean(re.sub(r'<[^>]+>', ' ', c)) for c in cells]
+    for row in all_rows:
+        cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL | re.IGNORECASE)
+        cells = [clean(re.sub(r'<[^>]+>', ' ', c)) for c in cells]
 
-            if len(cells) < 3:
-                continue
+        if len(cells) < 3:
+            continue
 
-            # Poišči polja po indeksu (tabela ima 9 stolpcev)
-            narocnik    = cells[0] if len(cells) > 0 else ""
-            naziv       = cells[1] if len(cells) > 1 else ""
-            oznaka      = cells[2] if len(cells) > 2 else ""
-            datum_ejn   = cells[4] if len(cells) > 4 else ""
-            datum_pjn   = cells[5] if len(cells) > 5 else ""
-            rok_oddaje  = cells[6] if len(cells) > 6 else ""
-            stanje      = cells[8] if len(cells) > 8 else ""
+        # Stolpci: Naročnik | Naziv JN | Oznaka JN | Vrsta postopka | Datum eJN |
+        #          Datum objave na PJN | Rok za oddajo | Odpiranje ponudb | Stanje JN
+        narocnik   = cells[0] if len(cells) > 0 else ""
+        naziv      = cells[1] if len(cells) > 1 else ""
+        oznaka     = cells[2] if len(cells) > 2 else ""
+        datum_ejn  = cells[4] if len(cells) > 4 else ""
+        datum_pjn  = cells[5] if len(cells) > 5 else ""
+        rok_oddaje = cells[6] if len(cells) > 6 else ""
+        stanje     = cells[8] if len(cells) > 8 else ""
 
-            if not naziv or not oznaka:
-                continue
+        if not naziv or not oznaka:
+            continue
 
-            # Filter po ključnih besedah v naslovu
-            naziv_lower = naziv.lower()
-            narocnik_lower = narocnik.lower()
-            match = any(k in naziv_lower for k in KLJUCNE_BESEDE)
-            if not match:
-                match = any(k in narocnik_lower for k in KLJUCNE_BESEDE)
-            if not match:
-                continue
+        naziv_lower    = naziv.lower()
+        narocnik_lower = narocnik.lower()
+        match = any(k in naziv_lower for k in KLJUCNE_BESEDE)
+        if not match:
+            match = any(k in narocnik_lower for k in KLJUCNE_BESEDE)
+        if not match:
+            continue
 
-            # Datum — shrani brez filtra po starosti
-            datum_raw = datum_pjn or datum_ejn
-            datum = parse_date(datum_raw)
+        datum_raw = datum_pjn or datum_ejn
+        datum = parse_date(datum_raw)
 
-            # Sestavi ID in link
-            ext_id = "EJN-" + re.sub(r'[^A-Za-z0-9_-]', '_', oznaka)
+        ext_id = "EJN-" + re.sub(r'[^A-Za-z0-9_-]', '_', oznaka)
 
-            # Link na posamezen razpis — iz href v celici z oznako
-            link_match = re.search(
-                r'href="([^"]*aktualna_javna_narocila[^"]*narociloId[^"]*)"',
-                row, re.IGNORECASE
-            )
-            if link_match:
-                link = "https://ejn.gov.si" + link_match.group(1) if link_match.group(1).startswith("/") else link_match.group(1)
-            else:
-                link = f"https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila.xhtml?oznakaJN={oznaka}"
+        link_match = re.search(
+            r'href="([^"]*aktualna_javna_narocila[^"]*narociloId[^"]*)"',
+            row, re.IGNORECASE
+        )
+        if link_match:
+            href = link_match.group(1)
+            link = ("https://ejn.gov.si" + href) if href.startswith("/") else href
+        else:
+            link = f"https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila.xhtml?oznakaJN={oznaka}"
 
-            razpisi.append({
-                "external_id":   ext_id,
-                "vir":           "e-JN",
-                "naslov":        naziv,
-                "narocnik":      narocnik or None,
-                "cpv_kode":      "",
-                "vrednost":      None,
-                "vrednost_eur":  None,
-                "rok_za_oddajo": parse_date(rok_oddaje),
-                "datum_objave":  datum,
-                "link":          link,
-                "status":        "odprt" if stanje.lower() not in ("zaključen", "preklican") else stanje.lower(),
-            })
-            ejn_count += 1
+        razpisi.append({
+            "external_id":   ext_id,
+            "vir":           "e-JN",
+            "naslov":        naziv,
+            "narocnik":      narocnik or None,
+            "cpv_kode":      "",
+            "vrednost":      None,
+            "vrednost_eur":  None,
+            "rok_za_oddajo": parse_date(rok_oddaje),
+            "datum_objave":  datum,
+            "link":          link,
+            "status":        "odprt" if stanje.lower() not in ("zaključen", "preklican") else stanje.lower(),
+        })
+        ejn_count += 1
 
-        print(f"e-JN: {ejn_count} ujemajočih razpisov")
-    else:
-        print(f"e-JN: napaka {r.status_code}")
+    print(f"e-JN: {ejn_count} ujemajočih razpisov")
+
 except Exception as e:
     print(f"e-JN napaka: {e}")
 
