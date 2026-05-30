@@ -105,7 +105,7 @@ def ejn_inspect_form(html: str) -> dict:
     form_id = form.get("id", "unknown")
     print(f"  [FORM] ID: {form_id}, action: {form.get('action','')}")
 
-    # Izpiši VSA input polja
+    # Izpiši VSA input polja brez izjeme
     fields = {}
     for inp in form.find_all(["input", "select", "textarea"]):
         name  = inp.get("name", "")
@@ -113,11 +113,8 @@ def ejn_inspect_form(html: str) -> dict:
         value = inp.get("value", "")
         if name:
             fields[name] = value
-            # Izpiši polja ki so verjetno iskalna (vsebujejo besede: naziv, cpv, narocnik, isci)
-            keywords_in_name = any(k in name.lower() for k in
-                                   ["naziv", "cpv", "narocnik", "isci", "btn", "search", "filter"])
-            if keywords_in_name or itype in ("submit", "button"):
-                print(f"  [FORM]   {itype:10s} name='{name}' value='{value[:60]}'")
+            if name != "javax.faces.ViewState":  # ViewState je predolg za log
+                print(f"  [FORM]   {itype:10s} name='{name}' value='{value[:80]}'")
 
     # ViewState
     vs = fields.get("javax.faces.ViewState", "")
