@@ -71,6 +71,8 @@ def clean(s: str | None) -> str:
     return unescape(re.sub(r'\s+', ' ', s)).strip()
 
 
+EJN_BASE = "https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila.xhtml"
+
 def ejn_parse_rows(html: str) -> list:
     """Razčleni vrstice tabele iz HTML strani e-JN."""
     return re.findall(
@@ -78,71 +80,100 @@ def ejn_parse_rows(html: str) -> list:
         html, re.DOTALL | re.IGNORECASE
     )
 
-def ejn_row_fingerprint(rows: list) -> str:
-    """Vrne kratki fingerprint prve vrstice za zaznavo podvojenih strani."""
-    if not rows:
-        return ""
-    cells = re.findall(r'<td[^>]*>(.*?)</td>', rows[0], re.DOTALL | re.IGNORECASE)
-    return "|".join(re.sub(r'<[^>]+>', '', c).strip()[:30] for c in cells[:3])
+def ejn_extract_viewstate(html: str) -> str | None:
+    """Izvleče JSF ViewState vrednost iz HTML."""
+    m = re.search(r'id="javax\.faces\.ViewState"[^>]*value="([^"]+)"', html)
+    if m:
+        return m.group(1)
+    m = re.search(r'name="javax\.faces\.ViewState"[^>]*value="([^"]+)"', html)
+    if m:
+        return m.group(1)
+    return None
+
+def ejn_extract_form_id(html: str) -> str:
+    """Izvleče ID glavnega forma (npr. 'searchForm' ali 'j_idt12')."""
+    m = re.search(r'<form[^>]+id="([^"]+)"[^>]*action="[^"]*aktualna_javna_narocila', html, re.IGNORECASE)
+    if m:
+        return m.group(1)
+    # fallback — poišči prvi form z action na to stran
+    m = re.search(r'<form[^>]+id="([^"]+)"', html, re.IGNORECASE)
+    return m.group(1) if m else "searchForm"
+
+def ejn_search(session: requests.Session, keyword: str, viewstate: str, form_id: str) -> list:
+    """Pošlje JSF POST request z iskanjem po Naziv polju."""
+    # JSF zahteva: form_id:komponenta = vrednost
+    # Polje za Naziv je verjetno form_id:naziv ali form_id:inputNaziv
+    # Pošljemo več možnih imen hkrati — JSF ignorira neznana
+    data = {
+        f"{form_id}": f"{form_id}",
+        f"{form_id}:naziv": keyword,
+        f"{form_id}:inputNaziv": keyword,
+        f"{form_id}:j_idt_naziv": keyword,
+        f"{form_id}:btnIsciBesedilo": "",       # gumb Išči
+        f"{form_id}:btnIsci": "",
+        "javax.faces.ViewState": viewstate,
+        "javax.faces.partial.ajax": "false",
+    }
+    r = session.post(EJN_BASE, data=data,
+                     headers={**HEADERS, "Content-Type": "application/x-www-form-urlencoded"},
+                     timeout=30)
+    return ejn_parse_rows(r.text), r.text
 
 
 # ── e-JN Slovenija ────────────────────────────────────────────────
 print("=== e-JN scraping ===")
 try:
-    EJN_BASE  = "https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila.xhtml"
-    MAX_PAGES = 35    # varnostna meja (~1750 razpisov pri 50/stran)
     ejn_count = 0
     all_rows  = []
-    seen_fingerprints = set()
+    seen_ext_ids = set()
 
-    for page in range(1, MAX_PAGES + 1):
-        # Preizkusi oba URL formata — ?page=N in ?first=N
-        if page == 1:
-            url = EJN_BASE
+    session = requests.Session()
+
+    # 1. Pridobi prvo stran + ViewState
+    r0 = session.get(EJN_BASE, headers=HEADERS, timeout=30)
+    print(f"e-JN GET stran 1: HTTP {r0.status_code}, {len(r0.content)} bytov")
+
+    if r0.status_code == 200:
+        html0     = r0.text
+        viewstate = ejn_extract_viewstate(html0)
+        form_id   = ejn_extract_form_id(html0)
+        print(f"  ViewState: {'najden' if viewstate else 'NI NAJDEN'}")
+        print(f"  Form ID: {form_id}")
+
+        # Shrani vrstice prve strani (brez filtra)
+        first_rows = ejn_parse_rows(html0)
+        all_rows.extend(first_rows)
+        print(f"  Stran 1 (brez filtra): {len(first_rows)} vrstic")
+
+        # 2. Če imamo ViewState, pošljemo JSF POST za vsak ključni termin
+        #    Iščemo po skupinah da zmanjšamo število requestov
+        SEARCH_TERMS = [
+            "vijak", "matica", "podložka",
+            "sornik", "zatič", "pritrdil",
+            "fastener", "bolt", "screw",
+            "kovinski", "jeklen", "nerjavno",
+        ]
+
+        if viewstate:
+            for term in SEARCH_TERMS:
+                try:
+                    rows, html_resp = ejn_search(session, term, viewstate, form_id)
+                    # Posodobi ViewState za naslednji request
+                    new_vs = ejn_extract_viewstate(html_resp)
+                    if new_vs:
+                        viewstate = new_vs
+                    print(f"  Iskanje '{term}': {len(rows)} vrstic")
+                    all_rows.extend(rows)
+                    time.sleep(0.7)
+                except Exception as es:
+                    print(f"  Iskanje '{term}' napaka: {es}")
         else:
-            url = f"{EJN_BASE}?page={page}"
+            print("  ViewState ni najden — ostajamo pri prvi strani (50 vrstic)")
 
-        try:
-            rp = requests.get(url, headers=HEADERS, timeout=30)
-            print(f"  Stran {page}: HTTP {rp.status_code}, {len(rp.content)} bytov", end="")
-
-            if rp.status_code != 200:
-                print(f" — ustavitev")
-                break
-
-            rows = ejn_parse_rows(rp.text)
-            if not rows:
-                print(f" — 0 vrstic, ustavitev")
-                break
-
-            # Zazna isto stran (JSF ignorira neznane GET parametre → vrne stran 1)
-            fp = ejn_row_fingerprint(rows)
-            if fp in seen_fingerprints:
-                print(f" — enaka vsebina kot prejšnja stran, ustavitev")
-                break
-            seen_fingerprints.add(fp)
-
-            all_rows.extend(rows)
-            print(f" — {len(rows)} vrstic (skupaj {len(all_rows)})")
-
-            # Debug prve strani
-            if page == 1:
-                print("--- PRVIH 5 VRSTIC (debug) ---")
-                for i, row in enumerate(rows[:5]):
-                    cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL | re.IGNORECASE)
-                    cells = [clean(re.sub(r'<[^>]+>', ' ', c)) for c in cells]
-                    print(f"  Vrstica {i+1} ({len(cells)} celic): {cells}")
-                print("--- KONEC DEBUG ---")
-
-            time.sleep(0.5)
-
-        except Exception as ep:
-            print(f"\n  Stran {page} napaka: {ep}")
-            break
-
-    print(f"e-JN skupaj: {len(all_rows)} vrstic iz vseh strani")
+    print(f"e-JN skupaj pred deduplikacijo: {len(all_rows)} vrstic")
 
     for row in all_rows:
+        # Deduplikacija po oznaki JN (ista vrstica se pojavi v več iskanjih)
         cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL | re.IGNORECASE)
         cells = [clean(re.sub(r'<[^>]+>', ' ', c)) for c in cells]
 
@@ -174,6 +205,11 @@ try:
         datum = parse_date(datum_raw)
 
         ext_id = "EJN-" + re.sub(r'[^A-Za-z0-9_-]', '_', oznaka)
+
+        # Preskoči duplikate iz različnih iskanj
+        if ext_id in seen_ext_ids:
+            continue
+        seen_ext_ids.add(ext_id)
 
         link_match = re.search(
             r'href="([^"]*aktualna_javna_narocila[^"]*narociloId[^"]*)"',
