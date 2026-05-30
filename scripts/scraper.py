@@ -5,12 +5,22 @@ Scrapa e-JN in TED, pošlje razpise na razpismonitor.eu/api/import.php
 import os
 import re
 import time
+import smtplib
 import requests
 from datetime import datetime, date, timedelta
 from html import unescape
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 IMPORT_URL    = os.environ["IMPORT_URL"]
 IMPORT_SECRET = os.environ["IMPORT_SECRET"]
+GMAIL_USER    = os.environ.get("GMAIL_USER", "")
+GMAIL_PASS    = os.environ.get("GMAIL_APP_PASS", "")
+
+EMAIL_PREJEMNIKI = [
+    "tilen.burja@kovinocrom.si",
+    "ploncaric@gmail.com",
+]
 
 CPV_KODE       = ["44315400", "44315300", "44316000", "44532000", "44533000"]
 KLJUCNE_BESEDE = [
@@ -62,6 +72,100 @@ def parse_date(d: str | None) -> str | None:
         return datetime.fromisoformat(d[:10]).date().isoformat()
     except Exception:
         return None
+
+
+def poslji_email(novi_razpisi: list) -> None:
+    """Pošlje HTML email obvestilo za nove razpise."""
+    if not GMAIL_USER or not GMAIL_PASS:
+        print("  Email: GMAIL_USER ali GMAIL_APP_PASS nista nastavljena — preskočeno")
+        return
+    if not novi_razpisi:
+        return
+
+    stevilo = len(novi_razpisi)
+    zadeva = f"🔔 RazpisMonitor: {stevilo} nov{'i razpis' if stevilo == 1 else 'i razpisi'} za Kovinocrom"
+
+    # Sestavi HTML za vsak razpis
+    razpisi_html = ""
+    for r in novi_razpisi:
+        rok = r.get("rok_za_oddajo") or "—"
+        narocnik = r.get("narocnik") or "—"
+        link = r.get("link") or "#"
+        vir = r.get("vir", "")
+        razpisi_html += f"""
+        <div style="background:#f8f9fa;border-left:4px solid #2563eb;
+                    border-radius:6px;padding:16px 20px;margin-bottom:16px;">
+          <div style="font-size:11px;color:#6b7280;text-transform:uppercase;
+                      letter-spacing:0.05em;margin-bottom:6px;">{vir}</div>
+          <div style="font-size:16px;font-weight:600;color:#111827;margin-bottom:8px;">
+            {r.get("naslov","Brez naslova")}
+          </div>
+          <table style="font-size:13px;color:#374151;border-collapse:collapse;">
+            <tr>
+              <td style="padding:2px 12px 2px 0;color:#6b7280;white-space:nowrap;">Naročnik</td>
+              <td style="padding:2px 0;">{narocnik}</td>
+            </tr>
+            <tr>
+              <td style="padding:2px 12px 2px 0;color:#6b7280;white-space:nowrap;">Rok za oddajo</td>
+              <td style="padding:2px 0;font-weight:600;color:#dc2626;">{rok}</td>
+            </tr>
+          </table>
+          <a href="{link}" style="display:inline-block;margin-top:12px;padding:8px 16px;
+             background:#2563eb;color:#fff;text-decoration:none;border-radius:5px;
+             font-size:13px;font-weight:500;">Odpri razpis →</a>
+        </div>"""
+
+    html_body = f"""<!DOCTYPE html>
+<html lang="sl">
+<head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,sans-serif;">
+  <div style="max-width:600px;margin:32px auto;background:#fff;
+              border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
+
+    <!-- Header -->
+    <div style="background:#1e3a5f;padding:24px 28px;">
+      <div style="font-size:20px;font-weight:700;color:#fff;letter-spacing:-0.3px;">
+        📋 RazpisMonitor
+      </div>
+      <div style="font-size:13px;color:#93c5fd;margin-top:4px;">
+        Sistem za spremljanje javnih razpisov · Kovinocrom d.o.o.
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:24px 28px;">
+      <p style="font-size:15px;color:#111827;margin:0 0 20px;">
+        Danes smo zaznali <strong>{stevilo} nov{'i razpis' if stevilo == 1 else 'e razpise'}</strong>,
+        ki ustrezajo iskalnim kriterijem za Kovinocrom:
+      </p>
+
+      {razpisi_html}
+
+      <p style="font-size:12px;color:#9ca3af;margin-top:24px;padding-top:16px;
+                border-top:1px solid #e5e7eb;">
+        Obvestilo je bilo samodejno generirano s sistemom RazpisMonitor.<br>
+        Za pregled vseh razpisov obiščite
+        <a href="https://razpismonitor.eu" style="color:#2563eb;">razpismonitor.eu</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>"""
+
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = zadeva
+        msg["From"]    = f"RazpisMonitor <{GMAIL_USER}>"
+        msg["To"]      = ", ".join(EMAIL_PREJEMNIKI)
+        msg.attach(MIMEText(html_body, "html", "utf-8"))
+
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+            smtp.login(GMAIL_USER, GMAIL_PASS)
+            smtp.sendmail(GMAIL_USER, EMAIL_PREJEMNIKI, msg.as_string())
+
+        print(f"  Email poslan na: {', '.join(EMAIL_PREJEMNIKI)}")
+    except Exception as e:
+        print(f"  Email napaka: {e}")
 
 
 def clean(s: str | None) -> str:
@@ -259,6 +363,8 @@ except Exception as e:
 
 # ── Pošlji na razpismonitor.eu ────────────────────────────────────
 print(f"=== Pošiljam {len(razpisi)} razpisov na import endpoint ===")
+shranjeni_razpisi = []  # razpisi ki jih je import dejansko shranil (novi)
+
 if razpisi:
     try:
         r = requests.post(
@@ -270,6 +376,19 @@ if razpisi:
         print(f"Import HTTP {r.status_code}: {r.text[:500]}")
         if r.status_code != 200:
             raise SystemExit(1)
+
+        # Ugotovi koliko je bilo dejansko novih (saved > 0)
+        import_resp = r.json()
+        saved = import_resp.get("saved", 0)
+        if saved > 0:
+            # Vzemi prvih `saved` razpisov kot reprezentativne nove
+            # (import vrne samo skupno število, ne ID-jev — vzamemo vse)
+            shranjeni_razpisi = razpisi[:saved]
+            print(f"  {saved} novih razpisov — pošiljam email obvestilo...")
+            poslji_email(shranjeni_razpisi)
+        else:
+            print("  Ni novih razpisov — email ni poslan.")
+
     except SystemExit:
         raise
     except Exception as e:
