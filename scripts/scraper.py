@@ -71,33 +71,78 @@ def clean(s: str | None) -> str:
     return unescape(re.sub(r'\s+', ' ', s)).strip()
 
 
+def ejn_parse_rows(html: str) -> list:
+    """Razčleni vrstice tabele iz HTML strani e-JN."""
+    return re.findall(
+        r'<tr[^>]*class="[^"]*(?:odd|even|dataRow)[^"]*"[^>]*>(.*?)</tr>',
+        html, re.DOTALL | re.IGNORECASE
+    )
+
+def ejn_row_fingerprint(rows: list) -> str:
+    """Vrne kratki fingerprint prve vrstice za zaznavo podvojenih strani."""
+    if not rows:
+        return ""
+    cells = re.findall(r'<td[^>]*>(.*?)</td>', rows[0], re.DOTALL | re.IGNORECASE)
+    return "|".join(re.sub(r'<[^>]+>', '', c).strip()[:30] for c in cells[:3])
+
+
 # ── e-JN Slovenija ────────────────────────────────────────────────
 print("=== e-JN scraping ===")
 try:
-    ejn_url = "https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila.xhtml"
-    r = requests.get(ejn_url, headers=HEADERS, timeout=30)
-    print(f"e-JN HTTP {r.status_code}, {len(r.content)} bytov")
+    EJN_BASE  = "https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila.xhtml"
+    MAX_PAGES = 35    # varnostna meja (~1750 razpisov pri 50/stran)
+    ejn_count = 0
+    all_rows  = []
+    seen_fingerprints = set()
 
-    if r.status_code == 200:
-        html = r.text
-        ejn_count = 0
+    for page in range(1, MAX_PAGES + 1):
+        # Preizkusi oba URL formata — ?page=N in ?first=N
+        if page == 1:
+            url = EJN_BASE
+        else:
+            url = f"{EJN_BASE}?page={page}"
 
-        # Razčleni vrstice tabele — vsaka vrstica je <tr> z razredom row ali odd/even
-        # Stolpci: Naročnik | Naziv JN | Oznaka JN | Vrsta postopka | Datum eJN |
-        #          Datum objave na PJN | Rok za oddajo | Odpiranje ponudb | Stanje JN
-        rows = re.findall(r'<tr[^>]*class="[^"]*(?:odd|even|dataRow)[^"]*"[^>]*>(.*?)</tr>',
-                          html, re.DOTALL | re.IGNORECASE)
-        print(f"e-JN: najdenih {len(rows)} vrstic v tabeli")
+        try:
+            rp = requests.get(url, headers=HEADERS, timeout=30)
+            print(f"  Stran {page}: HTTP {rp.status_code}, {len(rp.content)} bytov", end="")
 
-        # Prikaži prvih 5 vrstic za debug
-        print("--- PRVIH 5 VRSTIC (debug) ---")
-        for i, row in enumerate(rows[:5]):
-            cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL | re.IGNORECASE)
-            cells = [clean(re.sub(r'<[^>]+>', ' ', c)) for c in cells]
-            print(f"  Vrstica {i+1} ({len(cells)} celic): {cells}")
-        print("--- KONEC DEBUG ---")
+            if rp.status_code != 200:
+                print(f" — ustavitev")
+                break
 
-        for row in rows:
+            rows = ejn_parse_rows(rp.text)
+            if not rows:
+                print(f" — 0 vrstic, ustavitev")
+                break
+
+            # Zazna isto stran (JSF ignorira neznane GET parametre → vrne stran 1)
+            fp = ejn_row_fingerprint(rows)
+            if fp in seen_fingerprints:
+                print(f" — enaka vsebina kot prejšnja stran, ustavitev")
+                break
+            seen_fingerprints.add(fp)
+
+            all_rows.extend(rows)
+            print(f" — {len(rows)} vrstic (skupaj {len(all_rows)})")
+
+            # Debug prve strani
+            if page == 1:
+                print("--- PRVIH 5 VRSTIC (debug) ---")
+                for i, row in enumerate(rows[:5]):
+                    cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL | re.IGNORECASE)
+                    cells = [clean(re.sub(r'<[^>]+>', ' ', c)) for c in cells]
+                    print(f"  Vrstica {i+1} ({len(cells)} celic): {cells}")
+                print("--- KONEC DEBUG ---")
+
+            time.sleep(0.5)
+
+        except Exception as ep:
+            print(f"\n  Stran {page} napaka: {ep}")
+            break
+
+    print(f"e-JN skupaj: {len(all_rows)} vrstic iz vseh strani")
+
+        for row in all_rows:
             # Izvleči vse celice
             cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL | re.IGNORECASE)
             cells = [clean(re.sub(r'<[^>]+>', ' ', c)) for c in cells]
@@ -158,7 +203,7 @@ try:
             })
             ejn_count += 1
 
-        print(f"e-JN: {ejn_count} ujemajočih razpisov (zadnjih 30 dni)")
+        print(f"e-JN: {ejn_count} ujemajočih razpisov")
     else:
         print(f"e-JN: napaka {r.status_code}")
 except Exception as e:
