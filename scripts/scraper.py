@@ -154,13 +154,6 @@ try:
             if not pub:
                 continue
 
-            # Filter: samo razpisi iz zadnjih 30 dni (pub_num oblika 123456-2025)
-            m = re.search(r'-(\d{4})$', pub)
-            if m:
-                year = int(m.group(1))
-                if year < date.today().year:
-                    continue  # star razpis
-
             ext_id = "TED-" + pub
 
             # Potegni naslov iz notice strani
