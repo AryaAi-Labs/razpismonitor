@@ -125,9 +125,29 @@ except Exception as e:
 
 # ── TED Europa ────────────────────────────────────────────────────
 print("=== TED scraping ===")
+
+# Preizkusi oba alternativna URL-ja
+print("--- TEST RSS ---")
 try:
-    date_from_str = DATE_FROM.strftime("%Y%m%d")
-    date_to_str   = date.today().strftime("%Y%m%d")
+    rss = requests.get(
+        "https://ted.europa.eu/RSSFeed?execSrc=search&page=1&q=cpv%3D44315400&scope=ACTIVE",
+        headers=HEADERS, timeout=20
+    )
+    print(f"RSS HTTP {rss.status_code}, prvih 800 znakov:\n{rss.text[:800]}")
+except Exception as e:
+    print(f"RSS napaka: {e}")
+
+print("--- TEST v3.0 GET ---")
+try:
+    v30 = requests.get(
+        "https://ted.europa.eu/api/v3.0/notices/search?q=cpv%3D44315400&scope=ACTIVE&pageNum=1&pageSize=5&sortField=ND&sortOrder=DESC",
+        headers=HEADERS, timeout=20
+    )
+    print(f"v3.0 HTTP {v30.status_code}, prvih 800 znakov:\n{v30.text[:800]}")
+except Exception as e:
+    print(f"v3.0 napaka: {e}")
+
+try:
     cpv_query     = " OR ".join(f"PC={c}*" for c in CPV_KODE)
 
     payload = {
@@ -142,7 +162,7 @@ try:
         headers={**HEADERS, "Content-Type": "application/json"},
         timeout=30
     )
-    print(f"TED HTTP {r.status_code}, raw: {r.text[:300]}")
+    print(f"TED v3 POST HTTP {r.status_code}, raw: {r.text[:300]}")
 
     if r.status_code == 200:
         data     = r.json()
