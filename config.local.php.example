@@ -1,0 +1,25 @@
+<?php
+/**
+ * LOKALNE NASTAVITVE — KOPIRAJ V config.local.php
+ * Ta datoteka je v .gitignore in se NE commitira.
+ *
+ * cp config.local.php.example config.local.php
+ * nato uredi config.local.php z resničnimi vrednostmi.
+ *
+ * VAŽNO: Ta datoteka se naloži PREDEN config.php definira konstante,
+ * zato tukaj normalno uporabljaš define() brez konfliktov.
+ */
+
+// ── MySQL (Hostinger hPanel → Databases → MySQL Databases) ────
+define('DB_HOST', 'localhost');
+define('DB_NAME', 'u476516023_razpisi');    // ime tvoje baze
+define('DB_USER', 'u476516023_razpisi');    // MySQL user (ponavadi enako kot baza)
+define('DB_PASS', 'TVOJE_MYSQL_GESLO');     // geslo ki si ga nastavil pri ustvarjanju userja
+
+// ── Claude API ─────────────────────────────────────────────────
+// Pridobi na: https://console.anthropic.com → API Keys
+define('CLAUDE_API_KEY', 'sk-ant-api03-XXXXXXXXXXXXXXXXXXXXXXXX');
+
+// ── Opcijsko: zamenjaj model ───────────────────────────────────
+// define('CLAUDE_MODEL', 'claude-haiku-4-5-20251001'); // cenejši, hitrejši
+// define('CLAUDE_MODEL', 'claude-sonnet-4-6');         // dober balans
