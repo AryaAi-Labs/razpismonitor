@@ -17,11 +17,10 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests beautifulsoup4 lxml
+        run: pip install requests
 
       - name: Run scraper
         env:
           IMPORT_URL: ${{ secrets.IMPORT_URL }}
           IMPORT_SECRET: ${{ secrets.IMPORT_SECRET }}
         run: python scripts/scraper.py
-
