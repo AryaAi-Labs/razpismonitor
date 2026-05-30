@@ -151,8 +151,8 @@ try:
     cpv_query     = " OR ".join(f"PC={c}*" for c in CPV_KODE)
 
     payload = {
-        "query":  cpv_query,
-        "fields": ["BT-5131-Part", "OPP-021-Contract"],
+        "query":  "fasteners OR bolts OR nuts OR screws OR washers",
+        "fields": ["BT-5131-Part"],
         "limit":  50,
         "page":   1,
     }
@@ -162,7 +162,7 @@ try:
         headers={**HEADERS, "Content-Type": "application/json"},
         timeout=30
     )
-    print(f"TED v3 POST HTTP {r.status_code}, raw: {r.text[:300]}")
+    print(f"TED v3 POST HTTP {r.status_code}, raw: {r.text[:500]}")
 
     if r.status_code == 200:
         data     = r.json()
