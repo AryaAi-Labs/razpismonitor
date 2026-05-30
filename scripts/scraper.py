@@ -215,15 +215,16 @@ try:
         if len(cells) < 3:
             continue
 
-        # Stolpci: Naročnik | Naziv JN | Oznaka JN | Vrsta postopka | Datum eJN |
-        #          Datum objave na PJN | Rok za oddajo | Odpiranje ponudb | Stanje JN
+        # Stolpci: [0] Naročnik | [1] Naziv | [2] Oznaka JN | [3] Vrsta postopka |
+        #          [4] Datum eJN | [5] Številka na PJN | [6] Datum objave na PJN |
+        #          [7] Rok za oddajo | [8] Odpiranje ponudb | [9] Stanje JN
         narocnik   = cells[0] if len(cells) > 0 else ""
         naziv      = cells[1] if len(cells) > 1 else ""
         oznaka     = cells[2] if len(cells) > 2 else ""
         datum_ejn  = cells[4] if len(cells) > 4 else ""
-        datum_pjn  = cells[5] if len(cells) > 5 else ""
-        rok_oddaje = cells[6] if len(cells) > 6 else ""
-        stanje     = cells[8] if len(cells) > 8 else ""
+        datum_pjn  = cells[6] if len(cells) > 6 else ""
+        rok_oddaje = cells[7] if len(cells) > 7 else ""
+        stanje     = cells[9] if len(cells) > 9 else ""
 
         if not naziv or not oznaka:
             continue
