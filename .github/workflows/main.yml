@@ -1,0 +1,26 @@
+name: RazpisMonitor Scraper
+
+on:
+  schedule:
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4
+        
+      - name: Run scraper
+        env:
+          IMPORT_URL: ${{ secrets.IMPORT_URL }}
+          IMPORT_SECRET: ${{ secrets.IMPORT_SECRET }}
+        run: python scripts/scraper.py
