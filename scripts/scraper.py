@@ -397,4 +397,26 @@ if razpisi:
 else:
     print("Ni razpisov za uvoz.")
 
+# ── TEST EMAIL — odstrani po potrditvi ───────────────────────────
+print("=== Pošiljam test email ===")
+if GMAIL_USER and GMAIL_PASS:
+    try:
+        now = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "RazpisMonitor — Test email"
+        msg["From"]    = f"RazpisMonitor <{GMAIL_USER}>"
+        msg["To"]      = "ploncaric@gmail.com"
+        msg.attach(MIMEText(
+            f"Sistem deluje pravilno. Test poslan ob {now}.",
+            "plain", "utf-8"
+        ))
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+            smtp.login(GMAIL_USER, GMAIL_PASS)
+            smtp.sendmail(GMAIL_USER, ["ploncaric@gmail.com"], msg.as_string())
+        print(f"  Test email poslan ob {now}")
+    except Exception as e:
+        print(f"  Test email napaka: {e}")
+else:
+    print("  GMAIL_USER / GMAIL_APP_PASS nista nastavljena")
+
 print("=== KONEC ===")
