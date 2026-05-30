@@ -13,10 +13,11 @@ IMPORT_URL    = os.environ["IMPORT_URL"]
 IMPORT_SECRET = os.environ["IMPORT_SECRET"]
 
 CPV_KODE       = ["44315400", "44315300", "44316000", "44532000", "44533000"]
-KLJUCNE_BESEDE = ["vijaki", "vijak", "matice", "matica", "podlozke", "podložke",
-                  "pritrdilni material", "vezni elementi", "fasteners",
-                  "bolts", "nuts", "washers", "kovinski elementi", "sorniki",
-                  "zakovice", "navoji", "navoj"]
+KLJUCNE_BESEDE = ["vijak", "matica", "podlozk", "podložk",
+                  "pritrdil", "vezni element", "fastener",
+                  "bolt", "nut", "washer", "kovinski", "jeklen", "jeklo",
+                  "sornik", "zakovica", "navoj", "material", "deli",
+                  "kovinarsk", "kovina", "metal"]
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
@@ -69,6 +70,14 @@ try:
                           html, re.DOTALL | re.IGNORECASE)
         print(f"e-JN: najdenih {len(rows)} vrstic v tabeli")
 
+        # Prikaži prvih 5 vrstic za debug
+        print("--- PRVIH 5 VRSTIC (debug) ---")
+        for i, row in enumerate(rows[:5]):
+            cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL | re.IGNORECASE)
+            cells = [clean(re.sub(r'<[^>]+>', ' ', c)) for c in cells]
+            print(f"  Vrstica {i+1} ({len(cells)} celic): {cells}")
+        print("--- KONEC DEBUG ---")
+
         for row in rows:
             # Izvleči vse celice
             cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL | re.IGNORECASE)
@@ -98,15 +107,9 @@ try:
             if not match:
                 continue
 
-            # Filter: samo zadnjih 30 dni (po datum_ejn ali datum_pjn)
+            # Datum — shrani brez filtra po starosti
             datum_raw = datum_pjn or datum_ejn
             datum = parse_date(datum_raw)
-            if datum:
-                try:
-                    if date.fromisoformat(datum) < DATE_FROM:
-                        continue
-                except Exception:
-                    pass
 
             # Sestavi ID in link
             ext_id = "EJN-" + re.sub(r'[^A-Za-z0-9_-]', '_', oznaka)
