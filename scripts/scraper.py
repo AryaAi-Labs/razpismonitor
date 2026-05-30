@@ -149,6 +149,11 @@ try:
         notices  = data.get("notices") or []
         ted_new  = 0
 
+        # DEBUG: pokaži strukturo prvega notice-a
+        if notices:
+            import json as _json
+            print(f"TED notices[0] struktura:\n{_json.dumps(notices[0], indent=2, ensure_ascii=False)}")
+
         for n in notices:
             pub = n.get("publication-number") or n.get("publicationNumber")
             if not pub:
