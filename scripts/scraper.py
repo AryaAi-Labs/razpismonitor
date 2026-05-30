@@ -8,7 +8,6 @@ import time
 import requests
 from datetime import datetime, date, timedelta
 from html import unescape
-from bs4 import BeautifulSoup
 
 IMPORT_URL    = os.environ["IMPORT_URL"]
 IMPORT_SECRET = os.environ["IMPORT_SECRET"]
@@ -81,148 +80,28 @@ def ejn_parse_rows(html: str) -> list:
         html, re.DOTALL | re.IGNORECASE
     )
 
-def ejn_inspect_form(html: str) -> dict:
-    """
-    S BeautifulSoup prebere VSA form polja in izpiše njihova imena.
-    Vrne slovar {ime_polja: vrednost} za POST, skupaj z ViewState.
-    """
-    soup = BeautifulSoup(html, "html.parser")
-
-    # Najdi form ki vodi na isto stran
-    form = None
-    for f in soup.find_all("form"):
-        action = f.get("action", "")
-        if "aktualna_javna_narocila" in action or not action:
-            form = f
-            break
-    if not form:
-        form = soup.find("form")
-
-    if not form:
-        print("  [FORM] Forma ni najdena!")
-        return {}
-
-    form_id = form.get("id", "unknown")
-    print(f"  [FORM] ID: {form_id}, action: {form.get('action','')}")
-
-    # Izpiši VSA input polja brez izjeme
-    fields = {}
-    for inp in form.find_all(["input", "select", "textarea"]):
-        name  = inp.get("name", "")
-        itype = inp.get("type", inp.name)
-        value = inp.get("value", "")
-        if name:
-            fields[name] = value
-            if name != "javax.faces.ViewState":  # ViewState je predolg za log
-                print(f"  [FORM]   {itype:10s} name='{name}' value='{value[:80]}'")
-
-    # ViewState
-    vs = fields.get("javax.faces.ViewState", "")
-    print(f"  [FORM] ViewState: {'najden ('+str(len(vs))+' znakov)' if vs else 'NI NAJDEN'}")
-    return fields, form_id
-
-def ejn_post_search(session: requests.Session, base_fields: dict, form_id: str,
-                    naziv: str = "", cpv: str = "") -> tuple:
-    """
-    Pošlje JSF POST z iskalnimi parametri.
-    Poišče pravo ime polja za naziv in CPV iz base_fields.
-    """
-    data = dict(base_fields)  # kopiraj vse obstoječe vrednosti (vključno z ViewState)
-
-    # Nastavi vrednost iskalnega polja za Naziv
-    naziv_field = None
-    cpv_field    = None
-    submit_field = None
-
-    for name in base_fields:
-        nl = name.lower()
-        if "naziv" in nl and naziv_field is None:
-            naziv_field = name
-        if "cpv" in nl and cpv_field is None:
-            cpv_field = name
-        if ("isci" in nl or "search" in nl or "btn" in nl) and "submit" not in nl:
-            submit_field = name
-
-    if naziv and naziv_field:
-        data[naziv_field] = naziv
-        print(f"  [POST] Iščem po naziv='{naziv}' v polju '{naziv_field}'")
-    if cpv and cpv_field:
-        data[cpv_field] = cpv
-        print(f"  [POST] Iščem po CPV='{cpv}' v polju '{cpv_field}'")
-    if submit_field:
-        data[submit_field] = base_fields.get(submit_field, "Išči")
-
-    r = session.post(
-        EJN_BASE, data=data,
-        headers={**HEADERS, "Content-Type": "application/x-www-form-urlencoded"},
-        timeout=30
-    )
-    rows = ejn_parse_rows(r.text)
-
-    # Posodobi ViewState za naslednji request
-    new_vs_m = re.search(r'id="javax\.faces\.ViewState"[^>]*value="([^"]+)"', r.text)
-    if new_vs_m:
-        base_fields["javax.faces.ViewState"] = new_vs_m.group(1)
-
-    return rows, r.text
-
 
 # ── e-JN Slovenija ────────────────────────────────────────────────
+# Opomba: e-JN uporablja JSF z dinamično renderiranimi iskalnimi polji.
+# GET paginacija ne deluje. Scraper zajame 50 najnovejših razpisov/dan
+# in filtrira po ključnih besedah. Ker tečemo vsak dan in razpisi trajajo
+# 2-4 tedne, relevantnih razpisov ne zamudimo.
 print("=== e-JN scraping ===")
 try:
     ejn_count    = 0
     all_rows     = []
     seen_ext_ids = set()
-    session      = requests.Session()
 
-    # 1. Pridobi prvo stran
-    r0 = session.get(EJN_BASE, headers=HEADERS, timeout=30)
+    r0 = requests.get(EJN_BASE, headers=HEADERS, timeout=30)
     print(f"e-JN GET: HTTP {r0.status_code}, {len(r0.content)} bytov")
 
-    if r0.status_code != 200:
-        raise Exception(f"e-JN vrnil HTTP {r0.status_code}")
-
-    html0     = r0.text
-    first_rows = ejn_parse_rows(html0)
-    all_rows.extend(first_rows)
-    print(f"  Stran 1 (brez filtra): {len(first_rows)} vrstic")
-
-    # 2. Inšpekcija forme — izpiše vsa polja v log
-    print("--- FORM INSPEKCIJA ---")
-    result = ejn_inspect_form(html0)
-    print("--- KONEC INSPEKCIJE ---")
-
-    if result and len(result) == 2:
-        base_fields, form_id = result
-
-        if base_fields.get("javax.faces.ViewState"):
-            # 3. POST iskanje po CPV kodah (bolj zanesljivo kot ključne besede)
-            CPV_ISKANJA = ["44315400", "44315300", "44316000", "44532000", "44533000"]
-            for cpv in CPV_ISKANJA:
-                try:
-                    rows, _ = ejn_post_search(session, base_fields, form_id, cpv=cpv)
-                    print(f"  CPV {cpv}: {len(rows)} vrstic")
-                    all_rows.extend(rows)
-                    time.sleep(0.7)
-                except Exception as es:
-                    print(f"  CPV {cpv} napaka: {es}")
-
-            # 4. POST iskanje po ključnih besedah
-            NAZIV_ISKANJA = ["vijak", "matica", "sornik", "pritrdilni", "fastener", "kovinski"]
-            for term in NAZIV_ISKANJA:
-                try:
-                    rows, _ = ejn_post_search(session, base_fields, form_id, naziv=term)
-                    print(f"  Naziv '{term}': {len(rows)} vrstic")
-                    all_rows.extend(rows)
-                    time.sleep(0.7)
-                except Exception as es:
-                    print(f"  Naziv '{term}' napaka: {es}")
-        else:
-            print("  ViewState ni najden — samo prva stran")
+    if r0.status_code == 200:
+        all_rows = ejn_parse_rows(r0.text)
+        print(f"  Najdenih {len(all_rows)} vrstic")
     else:
-        print("  Form inspekcija ni vrnila podatkov — samo prva stran")
+        print(f"  Napaka: HTTP {r0.status_code}")
 
-    print(f"e-JN skupaj pred deduplikacijo: {len(all_rows)} vrstic")
+    print(f"e-JN skupaj: {len(all_rows)} vrstic")
 
     for row in all_rows:
         # Deduplikacija po oznaki JN (ista vrstica se pojavi v več iskanjih)
