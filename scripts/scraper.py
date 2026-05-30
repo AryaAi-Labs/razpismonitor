@@ -8,6 +8,7 @@ import time
 import requests
 from datetime import datetime, date, timedelta
 from html import unescape
+from bs4 import BeautifulSoup
 
 IMPORT_URL    = os.environ["IMPORT_URL"]
 IMPORT_SECRET = os.environ["IMPORT_SECRET"]
@@ -80,95 +81,149 @@ def ejn_parse_rows(html: str) -> list:
         html, re.DOTALL | re.IGNORECASE
     )
 
-def ejn_extract_viewstate(html: str) -> str | None:
-    """Izvleče JSF ViewState vrednost iz HTML."""
-    m = re.search(r'id="javax\.faces\.ViewState"[^>]*value="([^"]+)"', html)
-    if m:
-        return m.group(1)
-    m = re.search(r'name="javax\.faces\.ViewState"[^>]*value="([^"]+)"', html)
-    if m:
-        return m.group(1)
-    return None
+def ejn_inspect_form(html: str) -> dict:
+    """
+    S BeautifulSoup prebere VSA form polja in izpiše njihova imena.
+    Vrne slovar {ime_polja: vrednost} za POST, skupaj z ViewState.
+    """
+    soup = BeautifulSoup(html, "html.parser")
 
-def ejn_extract_form_id(html: str) -> str:
-    """Izvleče ID glavnega forma (npr. 'searchForm' ali 'j_idt12')."""
-    m = re.search(r'<form[^>]+id="([^"]+)"[^>]*action="[^"]*aktualna_javna_narocila', html, re.IGNORECASE)
-    if m:
-        return m.group(1)
-    # fallback — poišči prvi form z action na to stran
-    m = re.search(r'<form[^>]+id="([^"]+)"', html, re.IGNORECASE)
-    return m.group(1) if m else "searchForm"
+    # Najdi form ki vodi na isto stran
+    form = None
+    for f in soup.find_all("form"):
+        action = f.get("action", "")
+        if "aktualna_javna_narocila" in action or not action:
+            form = f
+            break
+    if not form:
+        form = soup.find("form")
 
-def ejn_search(session: requests.Session, keyword: str, viewstate: str, form_id: str) -> list:
-    """Pošlje JSF POST request z iskanjem po Naziv polju."""
-    # JSF zahteva: form_id:komponenta = vrednost
-    # Polje za Naziv je verjetno form_id:naziv ali form_id:inputNaziv
-    # Pošljemo več možnih imen hkrati — JSF ignorira neznana
-    data = {
-        f"{form_id}": f"{form_id}",
-        f"{form_id}:naziv": keyword,
-        f"{form_id}:inputNaziv": keyword,
-        f"{form_id}:j_idt_naziv": keyword,
-        f"{form_id}:btnIsciBesedilo": "",       # gumb Išči
-        f"{form_id}:btnIsci": "",
-        "javax.faces.ViewState": viewstate,
-        "javax.faces.partial.ajax": "false",
-    }
-    r = session.post(EJN_BASE, data=data,
-                     headers={**HEADERS, "Content-Type": "application/x-www-form-urlencoded"},
-                     timeout=30)
-    return ejn_parse_rows(r.text), r.text
+    if not form:
+        print("  [FORM] Forma ni najdena!")
+        return {}
+
+    form_id = form.get("id", "unknown")
+    print(f"  [FORM] ID: {form_id}, action: {form.get('action','')}")
+
+    # Izpiši VSA input polja
+    fields = {}
+    for inp in form.find_all(["input", "select", "textarea"]):
+        name  = inp.get("name", "")
+        itype = inp.get("type", inp.name)
+        value = inp.get("value", "")
+        if name:
+            fields[name] = value
+            # Izpiši polja ki so verjetno iskalna (vsebujejo besede: naziv, cpv, narocnik, isci)
+            keywords_in_name = any(k in name.lower() for k in
+                                   ["naziv", "cpv", "narocnik", "isci", "btn", "search", "filter"])
+            if keywords_in_name or itype in ("submit", "button"):
+                print(f"  [FORM]   {itype:10s} name='{name}' value='{value[:60]}'")
+
+    # ViewState
+    vs = fields.get("javax.faces.ViewState", "")
+    print(f"  [FORM] ViewState: {'najden ('+str(len(vs))+' znakov)' if vs else 'NI NAJDEN'}")
+    return fields, form_id
+
+def ejn_post_search(session: requests.Session, base_fields: dict, form_id: str,
+                    naziv: str = "", cpv: str = "") -> tuple:
+    """
+    Pošlje JSF POST z iskalnimi parametri.
+    Poišče pravo ime polja za naziv in CPV iz base_fields.
+    """
+    data = dict(base_fields)  # kopiraj vse obstoječe vrednosti (vključno z ViewState)
+
+    # Nastavi vrednost iskalnega polja za Naziv
+    naziv_field = None
+    cpv_field    = None
+    submit_field = None
+
+    for name in base_fields:
+        nl = name.lower()
+        if "naziv" in nl and naziv_field is None:
+            naziv_field = name
+        if "cpv" in nl and cpv_field is None:
+            cpv_field = name
+        if ("isci" in nl or "search" in nl or "btn" in nl) and "submit" not in nl:
+            submit_field = name
+
+    if naziv and naziv_field:
+        data[naziv_field] = naziv
+        print(f"  [POST] Iščem po naziv='{naziv}' v polju '{naziv_field}'")
+    if cpv and cpv_field:
+        data[cpv_field] = cpv
+        print(f"  [POST] Iščem po CPV='{cpv}' v polju '{cpv_field}'")
+    if submit_field:
+        data[submit_field] = base_fields.get(submit_field, "Išči")
+
+    r = session.post(
+        EJN_BASE, data=data,
+        headers={**HEADERS, "Content-Type": "application/x-www-form-urlencoded"},
+        timeout=30
+    )
+    rows = ejn_parse_rows(r.text)
+
+    # Posodobi ViewState za naslednji request
+    new_vs_m = re.search(r'id="javax\.faces\.ViewState"[^>]*value="([^"]+)"', r.text)
+    if new_vs_m:
+        base_fields["javax.faces.ViewState"] = new_vs_m.group(1)
+
+    return rows, r.text
 
 
 # ── e-JN Slovenija ────────────────────────────────────────────────
 print("=== e-JN scraping ===")
 try:
-    ejn_count = 0
-    all_rows  = []
+    ejn_count    = 0
+    all_rows     = []
     seen_ext_ids = set()
+    session      = requests.Session()
 
-    session = requests.Session()
-
-    # 1. Pridobi prvo stran + ViewState
+    # 1. Pridobi prvo stran
     r0 = session.get(EJN_BASE, headers=HEADERS, timeout=30)
-    print(f"e-JN GET stran 1: HTTP {r0.status_code}, {len(r0.content)} bytov")
+    print(f"e-JN GET: HTTP {r0.status_code}, {len(r0.content)} bytov")
 
-    if r0.status_code == 200:
-        html0     = r0.text
-        viewstate = ejn_extract_viewstate(html0)
-        form_id   = ejn_extract_form_id(html0)
-        print(f"  ViewState: {'najden' if viewstate else 'NI NAJDEN'}")
-        print(f"  Form ID: {form_id}")
+    if r0.status_code != 200:
+        raise Exception(f"e-JN vrnil HTTP {r0.status_code}")
 
-        # Shrani vrstice prve strani (brez filtra)
-        first_rows = ejn_parse_rows(html0)
-        all_rows.extend(first_rows)
-        print(f"  Stran 1 (brez filtra): {len(first_rows)} vrstic")
+    html0     = r0.text
+    first_rows = ejn_parse_rows(html0)
+    all_rows.extend(first_rows)
+    print(f"  Stran 1 (brez filtra): {len(first_rows)} vrstic")
 
-        # 2. Če imamo ViewState, pošljemo JSF POST za vsak ključni termin
-        #    Iščemo po skupinah da zmanjšamo število requestov
-        SEARCH_TERMS = [
-            "vijak", "matica", "podložka",
-            "sornik", "zatič", "pritrdil",
-            "fastener", "bolt", "screw",
-            "kovinski", "jeklen", "nerjavno",
-        ]
+    # 2. Inšpekcija forme — izpiše vsa polja v log
+    print("--- FORM INSPEKCIJA ---")
+    result = ejn_inspect_form(html0)
+    print("--- KONEC INSPEKCIJE ---")
 
-        if viewstate:
-            for term in SEARCH_TERMS:
+    if result and len(result) == 2:
+        base_fields, form_id = result
+
+        if base_fields.get("javax.faces.ViewState"):
+            # 3. POST iskanje po CPV kodah (bolj zanesljivo kot ključne besede)
+            CPV_ISKANJA = ["44315400", "44315300", "44316000", "44532000", "44533000"]
+            for cpv in CPV_ISKANJA:
                 try:
-                    rows, html_resp = ejn_search(session, term, viewstate, form_id)
-                    # Posodobi ViewState za naslednji request
-                    new_vs = ejn_extract_viewstate(html_resp)
-                    if new_vs:
-                        viewstate = new_vs
-                    print(f"  Iskanje '{term}': {len(rows)} vrstic")
+                    rows, _ = ejn_post_search(session, base_fields, form_id, cpv=cpv)
+                    print(f"  CPV {cpv}: {len(rows)} vrstic")
                     all_rows.extend(rows)
                     time.sleep(0.7)
                 except Exception as es:
-                    print(f"  Iskanje '{term}' napaka: {es}")
+                    print(f"  CPV {cpv} napaka: {es}")
+
+            # 4. POST iskanje po ključnih besedah
+            NAZIV_ISKANJA = ["vijak", "matica", "sornik", "pritrdilni", "fastener", "kovinski"]
+            for term in NAZIV_ISKANJA:
+                try:
+                    rows, _ = ejn_post_search(session, base_fields, form_id, naziv=term)
+                    print(f"  Naziv '{term}': {len(rows)} vrstic")
+                    all_rows.extend(rows)
+                    time.sleep(0.7)
+                except Exception as es:
+                    print(f"  Naziv '{term}' napaka: {es}")
         else:
-            print("  ViewState ni najden — ostajamo pri prvi strani (50 vrstic)")
+            print("  ViewState ni najden — samo prva stran")
+    else:
+        print("  Form inspekcija ni vrnila podatkov — samo prva stran")
 
     print(f"e-JN skupaj pred deduplikacijo: {len(all_rows)} vrstic")
 
