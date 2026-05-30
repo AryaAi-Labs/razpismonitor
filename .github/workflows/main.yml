@@ -23,4 +23,6 @@ jobs:
         env:
           IMPORT_URL: ${{ secrets.IMPORT_URL }}
           IMPORT_SECRET: ${{ secrets.IMPORT_SECRET }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASS: ${{ secrets.GMAIL_APP_PASS }}
         run: python scripts/scraper.py
