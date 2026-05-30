@@ -13,14 +13,15 @@ IMPORT_URL    = os.environ["IMPORT_URL"]
 IMPORT_SECRET = os.environ["IMPORT_SECRET"]
 
 CPV_KODE       = ["44315400", "44315300", "44316000", "44532000", "44533000"]
-KLJUCNE_BESEDE = ["vijaki", "vijak", "matice", "matica", "podlozke",
+KLJUCNE_BESEDE = ["vijaki", "vijak", "matice", "matica", "podlozke", "podložke",
                   "pritrdilni material", "vezni elementi", "fasteners",
-                  "bolts", "nuts", "washers", "kovinski elementi"]
+                  "bolts", "nuts", "washers", "kovinski elementi", "sorniki",
+                  "zakovice", "navoji", "navoj"]
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
-    "Accept": "text/html,application/json,*/*",
-    "Accept-Language": "en-US,en;q=0.9",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "sl-SI,sl;q=0.9,en-US;q=0.8,en;q=0.7",
 }
 
 DATE_FROM = date.today() - timedelta(days=30)
@@ -28,35 +29,13 @@ DATE_FROM = date.today() - timedelta(days=30)
 razpisi = []
 
 
-def ted_notice_title(pub_num: str) -> str:
-    """Potegne naslov iz TED notice strani."""
-    url = f"https://ted.europa.eu/en/notice/{pub_num}"
-    try:
-        r = requests.get(url, headers=HEADERS, timeout=15)
-        if r.status_code != 200:
-            return "Brez naslova"
-        # <title>Naslov | TED</title>
-        m = re.search(r'<title[^>]*>([^<]+)</title>', r.text, re.IGNORECASE)
-        if m:
-            t = unescape(m.group(1).strip())
-            t = re.sub(r'\s*[|\-]\s*TED.*$', '', t, flags=re.IGNORECASE).strip()
-            if len(t) > 5:
-                return t
-        # fallback: <h1>
-        m = re.search(r'<h1[^>]*>([^<]{10,})</h1>', r.text, re.IGNORECASE)
-        if m:
-            return unescape(m.group(1).strip())
-    except Exception as e:
-        print(f"  Napaka pri naslovu {pub_num}: {e}")
-    return "Brez naslova"
-
-
 def parse_date(d: str | None) -> str | None:
     """Normalizira datum v YYYY-MM-DD."""
     if not d:
         return None
+    d = d.strip()
     # DD.MM.YYYY
-    m = re.match(r'^(\d{1,2})\.(\d{1,2})\.(\d{4})$', d.strip())
+    m = re.match(r'^(\d{1,2})\.(\d{1,2})\.(\d{4})$', d)
     if m:
         return f"{m.group(3)}-{m.group(2).zfill(2)}-{m.group(1).zfill(2)}"
     try:
@@ -65,31 +44,62 @@ def parse_date(d: str | None) -> str | None:
         return None
 
 
+def clean(s: str | None) -> str:
+    """Odstrani HTML entitete in odvečne presledke."""
+    if not s:
+        return ""
+    return unescape(re.sub(r'\s+', ' ', s)).strip()
+
+
 # ── e-JN Slovenija ────────────────────────────────────────────────
 print("=== e-JN scraping ===")
 try:
-    r = requests.get(
-        "https://www.enarocanje.si/opendata/Aktualni_razpisi.json",
-        headers=HEADERS, timeout=30, verify=False
-    )
+    ejn_url = "https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila.xhtml"
+    r = requests.get(ejn_url, headers=HEADERS, timeout=30)
     print(f"e-JN HTTP {r.status_code}, {len(r.content)} bytov")
 
     if r.status_code == 200:
-        data = r.json()
+        html = r.text
         ejn_count = 0
-        for n in data:
-            cpv    = n.get("cpv_koda") or n.get("CPV") or ""
-            naslov = (n.get("naslov") or n.get("predmet_narocila") or "").lower()
 
-            # Filter po CPV ali ključnih besedah
-            match = any(c[:8] in cpv for c in CPV_KODE)
+        # Razčleni vrstice tabele — vsaka vrstica je <tr> z razredom row ali odd/even
+        # Stolpci: Naročnik | Naziv JN | Oznaka JN | Vrsta postopka | Datum eJN |
+        #          Datum objave na PJN | Rok za oddajo | Odpiranje ponudb | Stanje JN
+        rows = re.findall(r'<tr[^>]*class="[^"]*(?:odd|even|dataRow)[^"]*"[^>]*>(.*?)</tr>',
+                          html, re.DOTALL | re.IGNORECASE)
+        print(f"e-JN: najdenih {len(rows)} vrstic v tabeli")
+
+        for row in rows:
+            # Izvleči vse celice
+            cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL | re.IGNORECASE)
+            cells = [clean(re.sub(r'<[^>]+>', ' ', c)) for c in cells]
+
+            if len(cells) < 3:
+                continue
+
+            # Poišči polja po indeksu (tabela ima 9 stolpcev)
+            narocnik    = cells[0] if len(cells) > 0 else ""
+            naziv       = cells[1] if len(cells) > 1 else ""
+            oznaka      = cells[2] if len(cells) > 2 else ""
+            datum_ejn   = cells[4] if len(cells) > 4 else ""
+            datum_pjn   = cells[5] if len(cells) > 5 else ""
+            rok_oddaje  = cells[6] if len(cells) > 6 else ""
+            stanje      = cells[8] if len(cells) > 8 else ""
+
+            if not naziv or not oznaka:
+                continue
+
+            # Filter po ključnih besedah v naslovu
+            naziv_lower = naziv.lower()
+            narocnik_lower = narocnik.lower()
+            match = any(k in naziv_lower for k in KLJUCNE_BESEDE)
             if not match:
-                match = any(k in naslov for k in KLJUCNE_BESEDE)
+                match = any(k in narocnik_lower for k in KLJUCNE_BESEDE)
             if not match:
                 continue
 
-            # Filter: samo zadnjih 30 dni
-            datum_raw = n.get("datum_objave")
+            # Filter: samo zadnjih 30 dni (po datum_ejn ali datum_pjn)
+            datum_raw = datum_pjn or datum_ejn
             datum = parse_date(datum_raw)
             if datum:
                 try:
@@ -98,21 +108,31 @@ try:
                 except Exception:
                     pass
 
-            val    = n.get("ocenjena_vrednost")
-            ext_id = "EJN-" + str(n.get("id") or n.get("stevilka_objave") or abs(hash(naslov + cpv)))
+            # Sestavi ID in link
+            ext_id = "EJN-" + re.sub(r'[^A-Za-z0-9_-]', '_', oznaka)
+
+            # Link na posamezen razpis — iz href v celici z oznako
+            link_match = re.search(
+                r'href="([^"]*aktualna_javna_narocila[^"]*narociloId[^"]*)"',
+                row, re.IGNORECASE
+            )
+            if link_match:
+                link = "https://ejn.gov.si" + link_match.group(1) if link_match.group(1).startswith("/") else link_match.group(1)
+            else:
+                link = f"https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila.xhtml?oznakaJN={oznaka}"
 
             razpisi.append({
                 "external_id":   ext_id,
                 "vir":           "e-JN",
-                "naslov":        n.get("naslov") or n.get("predmet_narocila") or "Brez naslova",
-                "narocnik":      n.get("narocnik") or n.get("naziv_narocnika"),
-                "cpv_kode":      cpv,
-                "vrednost":      str(int(float(val))) if val else None,
-                "vrednost_eur":  float(val) if val else None,
-                "rok_za_oddajo": parse_date(n.get("rok_oddaje") or n.get("rok_za_oddajo")),
+                "naslov":        naziv,
+                "narocnik":      narocnik or None,
+                "cpv_kode":      "",
+                "vrednost":      None,
+                "vrednost_eur":  None,
+                "rok_za_oddajo": parse_date(rok_oddaje),
                 "datum_objave":  datum,
-                "link":          n.get("url") or n.get("link"),
-                "status":        "odprt",
+                "link":          link,
+                "status":        "odprt" if stanje.lower() not in ("zaključen", "preklican") else stanje.lower(),
             })
             ejn_count += 1
 
@@ -125,34 +145,12 @@ except Exception as e:
 
 # ── TED Europa ────────────────────────────────────────────────────
 print("=== TED scraping ===")
-
-# Preizkusi oba alternativna URL-ja
-print("--- TEST RSS ---")
 try:
-    rss = requests.get(
-        "https://ted.europa.eu/RSSFeed?execSrc=search&page=1&q=cpv%3D44315400&scope=ACTIVE",
-        headers=HEADERS, timeout=20
-    )
-    print(f"RSS HTTP {rss.status_code}, prvih 800 znakov:\n{rss.text[:800]}")
-except Exception as e:
-    print(f"RSS napaka: {e}")
-
-print("--- TEST v3.0 GET ---")
-try:
-    v30 = requests.get(
-        "https://ted.europa.eu/api/v3.0/notices/search?q=cpv%3D44315400&scope=ACTIVE&pageNum=1&pageSize=5&sortField=ND&sortOrder=DESC",
-        headers=HEADERS, timeout=20
-    )
-    print(f"v3.0 HTTP {v30.status_code}, prvih 800 znakov:\n{v30.text[:800]}")
-except Exception as e:
-    print(f"v3.0 napaka: {e}")
-
-try:
-    cpv_query     = " OR ".join(f"PC={c}*" for c in CPV_KODE)
-
+    # TED API v3 — keyword search po opisnih besedah
+    # Vrne notices s publication-number; naslove potegnemo iz HTML strani
     payload = {
-        "query":  "fasteners OR bolts OR nuts OR screws OR washers",
-        "fields": ["BT-5131-Part"],
+        "query":  "PC=44315400* OR PC=44315300* OR PC=44316000* OR PC=44532000* OR PC=44533000*",
+        "fields": ["publication-number"],
         "limit":  50,
         "page":   1,
     }
@@ -162,21 +160,21 @@ try:
         headers={**HEADERS, "Content-Type": "application/json"},
         timeout=30
     )
-    print(f"TED v3 POST HTTP {r.status_code}, raw: {r.text[:500]}")
+    print(f"TED v3 POST HTTP {r.status_code}")
 
     if r.status_code == 200:
-        data     = r.json()
-        notices  = data.get("notices") or []
-        ted_new  = 0
-
+        data    = r.json()
+        notices = data.get("notices") or []
+        ted_new = 0
         skipped_old = 0
+
         for n in notices:
             pub = n.get("publication-number") or n.get("publicationNumber")
             if not pub:
                 continue
 
             # Preskoči stare razpise — samo 2025 in 2026
-            m = re.search(r'-(\d{4})$', pub)
+            m = re.search(r'-(\d{4})$', str(pub))
             if m:
                 year = int(m.group(1))
                 if year < 2025:
@@ -187,7 +185,23 @@ try:
 
             # Potegni naslov iz notice strani
             print(f"  Pridobivam naslov za {pub}...")
-            title = ted_notice_title(pub)
+            url = f"https://ted.europa.eu/en/notice/{pub}"
+            title = "Brez naslova"
+            try:
+                tr = requests.get(url, headers=HEADERS, timeout=15)
+                if tr.status_code == 200:
+                    tm = re.search(r'<title[^>]*>([^<]+)</title>', tr.text, re.IGNORECASE)
+                    if tm:
+                        t = unescape(tm.group(1).strip())
+                        t = re.sub(r'\s*[|\-]\s*TED.*$', '', t, flags=re.IGNORECASE).strip()
+                        if len(t) > 5:
+                            title = t
+                    if title == "Brez naslova":
+                        hm = re.search(r'<h1[^>]*>([^<]{10,})</h1>', tr.text, re.IGNORECASE)
+                        if hm:
+                            title = unescape(hm.group(1).strip())
+            except Exception as e:
+                print(f"  Napaka pri naslovu {pub}: {e}")
             print(f"  -> {title[:60]}")
             time.sleep(1)  # prepreči 429
 
@@ -201,14 +215,14 @@ try:
                 "vrednost_eur":  None,
                 "rok_za_oddajo": None,
                 "datum_objave":  date.today().isoformat(),
-                "link":          f"https://ted.europa.eu/en/notice/{pub}",
+                "link":          url,
                 "status":        "odprt",
             })
             ted_new += 1
 
-        print(f"TED: {ted_new} novih razpisov, {skipped_old} preskočenih (pred 2025), {len(notices)-ted_new-skipped_old} ze v bazi")
+        print(f"TED: {ted_new} novih, {skipped_old} preskočenih (pred 2025)")
     else:
-        print(f"TED preskočen: HTTP {r.status_code} — {r.text[:200]}")
+        print(f"TED preskočen: HTTP {r.status_code} — {r.text[:300]}")
 except Exception as e:
     print(f"TED napaka (preskočen): {e}")
 
