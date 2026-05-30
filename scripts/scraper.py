@@ -13,11 +13,30 @@ IMPORT_URL    = os.environ["IMPORT_URL"]
 IMPORT_SECRET = os.environ["IMPORT_SECRET"]
 
 CPV_KODE       = ["44315400", "44315300", "44316000", "44532000", "44533000"]
-KLJUCNE_BESEDE = ["vijak", "matica", "podlozk", "podložk",
-                  "pritrdil", "vezni element", "fastener",
-                  "bolt", "nut", "washer", "kovinski", "jeklen", "jeklo",
-                  "sornik", "zakovica", "navoj", "material", "deli",
-                  "kovinarsk", "kovina", "metal"]
+KLJUCNE_BESEDE = [
+    # Vijaki, matice, podložke
+    "vijak", "matica", "podložk", "podlozk",
+    # Sorniki, zatičи, svorniki
+    "sornik", "svornik", "zatič", "zatic",
+    # Sidrni elementi
+    "sidrni", "sidro", "sidra",
+    # Navoji
+    "navoj", "navojna",
+    # Objemke, sponke
+    "objemka", "sponka",
+    # Pritrdilni material
+    "pritrdil", "pritrditven",
+    # Vezni elementi
+    "vezni", "veznih",
+    # Kovinski / jeklo / nerjavno
+    "kovinski", "kovinsk", "kovinar",
+    "jeklen", "jeklен", "nerjavno", "nerjaveč",
+    # Splošni kovinski deli
+    "kovinski deli", "kovinski element", "material", "deli", "elementi",
+    # Angleške besede
+    "fastener", "bolt", "nut", "screw", "washer",
+    "fitting", "connector", "clamp",
+]
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
