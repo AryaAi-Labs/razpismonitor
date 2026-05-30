@@ -19,6 +19,17 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
+      - name: Network diagnostics
+        run: |
+          echo "=== curl google ==="
+          curl -I --max-time 10 https://google.com || echo "google FAIL"
+          echo "=== curl razpismonitor.eu ==="
+          curl -I --max-time 10 https://razpismonitor.eu || echo "razpismonitor FAIL"
+          echo "=== curl gmail SMTP port 465 ==="
+          curl -v --max-time 10 smtps://smtp.gmail.com:465 2>&1 | head -20 || echo "gmail SMTP FAIL"
+          echo "=== DNS test ==="
+          nslookup razpismonitor.eu || echo "DNS FAIL"
+
       - name: Run scraper
         env:
           IMPORT_URL: ${{ secrets.IMPORT_URL }}
