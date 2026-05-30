@@ -149,15 +149,19 @@ try:
         notices  = data.get("notices") or []
         ted_new  = 0
 
-        # DEBUG: pokaži strukturo prvega notice-a
-        if notices:
-            import json as _json
-            print(f"TED notices[0] struktura:\n{_json.dumps(notices[0], indent=2, ensure_ascii=False)}")
-
+        skipped_old = 0
         for n in notices:
             pub = n.get("publication-number") or n.get("publicationNumber")
             if not pub:
                 continue
+
+            # Preskoči stare razpise — samo 2025 in 2026
+            m = re.search(r'-(\d{4})$', pub)
+            if m:
+                year = int(m.group(1))
+                if year < 2025:
+                    skipped_old += 1
+                    continue
 
             ext_id = "TED-" + pub
 
@@ -182,7 +186,7 @@ try:
             })
             ted_new += 1
 
-        print(f"TED: {ted_new} razpisov (letošnji)")
+        print(f"TED: {ted_new} novih razpisov, {skipped_old} preskočenih (pred 2025), {len(notices)-ted_new-skipped_old} ze v bazi")
     else:
         print(f"TED preskočen: HTTP {r.status_code} — {r.text[:200]}")
 except Exception as e:
