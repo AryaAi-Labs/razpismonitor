@@ -1,4 +1,141 @@
 <?php
+session_start();
+
+// ── Prijava ────────────────────────────────────────────────────────────────────
+const AUTH_USER   = 'kovinocrom';
+const AUTH_PASS   = 'Razpis2026!';
+const SESSION_TTL = 8 * 3600; // 8 ur
+
+// Odjava
+if (isset($_GET['logout'])) {
+    session_destroy();
+    header('Location: /');
+    exit;
+}
+
+// Obdelaj POST prijavo
+$loginError = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'])) {
+    if (trim($_POST['username']) === AUTH_USER && ($_POST['password'] ?? '') === AUTH_PASS) {
+        $_SESSION['loggedin'] = true;
+        $_SESSION['login_ts'] = time();
+        header('Location: /');
+        exit;
+    }
+    $loginError = 'Napačno uporabniško ime ali geslo.';
+}
+
+// Preveri sejo (loggedin + ni potekla)
+$loggedIn = !empty($_SESSION['loggedin'])
+    && isset($_SESSION['login_ts'])
+    && (time() - $_SESSION['login_ts']) < SESSION_TTL;
+
+// Prikaži prijavno stran
+if (!$loggedIn): ?>
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Prijava — RazpisMonitor</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0f172a;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    .login-box {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 380px;
+    }
+    .login-logo {
+      font-size: 22px;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 6px;
+      letter-spacing: -0.4px;
+    }
+    .login-sub {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 32px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    input[type=text], input[type=password] {
+      width: 100%;
+      padding: 10px 14px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 7px;
+      color: #f1f5f9;
+      font-size: 14px;
+      outline: none;
+      margin-bottom: 18px;
+      transition: border-color .15s;
+    }
+    input:focus { border-color: #3b82f6; }
+    .btn-login {
+      width: 100%;
+      padding: 11px;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-login:hover { background: #1d4ed8; }
+    .error {
+      background: #450a0a;
+      border: 1px solid #7f1d1d;
+      color: #fca5a5;
+      font-size: 13px;
+      padding: 10px 14px;
+      border-radius: 7px;
+      margin-bottom: 18px;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <div class="login-logo">📋 RazpisMonitor</div>
+    <div class="login-sub">Kovinocrom d.o.o. · Interni dostop</div>
+    <?php if ($loginError): ?>
+      <div class="error"><?= htmlspecialchars($loginError) ?></div>
+    <?php endif; ?>
+    <form method="POST">
+      <label>Uporabniško ime</label>
+      <input type="text" name="username" autocomplete="username" autofocus>
+      <label>Geslo</label>
+      <input type="password" name="password" autocomplete="current-password">
+      <button type="submit" class="btn-login">Prijava</button>
+    </form>
+  </div>
+</body>
+</html>
+<?php
+exit;
+endif;
+// ── Konec prijave ──────────────────────────────────────────────────────────────
+
 require __DIR__ . '/config.php';
 
 // ── Statistike ─────────────────────────────────────────────────────────────────
@@ -8,7 +145,7 @@ function getStats(): array {
     $skupnaVred   = (float)$db->query("SELECT COALESCE(SUM(vrednost_eur),0) FROM razpisi WHERE status='odprt'")->fetchColumn();
     $aiUjemanje   = (float)$db->query("SELECT COALESCE(AVG(ai_score),0) FROM razpisi WHERE status='odprt' AND ai_score IS NOT NULL")->fetchColumn();
     $rokDvaTedna  = (int)$db->query("SELECT COUNT(*) FROM razpisi WHERE status='odprt' AND rok_za_oddajo BETWEEN CURDATE() AND DATE_ADD(CURDATE(),INTERVAL 14 DAY)")->fetchColumn();
-    $zadnjaSync   = $db->query("SELECT MAX(started_at) FROM scraper_log WHERE status='done'")->fetchColumn();
+    $zadnjaSync   = $db->query("SELECT MAX(started_at) FROM scraper_log")->fetchColumn();
     $noviTeden    = (int)$db->query("SELECT COUNT(*) FROM razpisi WHERE datum_zaznave >= DATE_SUB(CURDATE(),INTERVAL 7 DAY)")->fetchColumn();
 
     return compact('aktivni','skupnaVred','aiUjemanje','rokDvaTedna','zadnjaSync','noviTeden');
@@ -834,21 +971,15 @@ function fmtVrednost(?float $v, ?string $raw): string {
   <div class="header-right">
     <div class="sync-status">
       <div class="sync-dot"></div>
-      Sinhronizirano <?= $stats['zadnjaSync'] ? date('j. n. H:i', strtotime($stats['zadnjaSync'])) : 'danes' ?>
+      Sinhronizirano <?php if ($stats['zadnjaSync']) { $dt = new DateTime($stats['zadnjaSync'], new DateTimeZone('UTC')); $dt->setTimezone(new DateTimeZone('Europe/Ljubljana')); echo $dt->format('j. n. H:i'); } else { echo 'danes'; } ?>
     </div>
-    <a href="api/refresh.php" target="_blank" class="btn btn-ghost" id="btnRefresh">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <path d="M1 4v6h6"/><path d="M23 20v-6h-6"/>
-        <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/>
-      </svg>
-      Osveži
-    </a>
     <button class="btn btn-gold" onclick="toggleChat()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
       </svg>
       AI Svetovalec
     </button>
+    <a href="?logout=1" class="btn btn-ghost" style="opacity:.6;font-size:12px;">Odjava</a>
   </div>
 </header>
 
@@ -945,7 +1076,7 @@ function fmtVrednost(?float $v, ?string $raw): string {
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
           </svg>
-          <p>Ni razpisov. Kliknite <strong>Osveži</strong> za scraping.</p>
+          <p>Ni razpisov. Scraper bo samodejno poiskal razpise vsak dan ob 7:00.</p>
         </div>
       <?php else: ?>
         <?php foreach ($razpisi as $r):
@@ -1385,12 +1516,28 @@ async function sendChatMessage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: msg, razpis_id: chatRazpisId }),
     });
-    const data = await resp.json();
+
+    const rawText = await resp.text();
+
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch(parseErr) {
+      // PHP napaka pred JSON outputom
+      removeTyping(typId);
+      appendMsg('ai', '⚠️ PHP napaka: ' + rawText.substring(0, 300));
+      return;
+    }
+
     removeTyping(typId);
-    appendMsg('ai', data.response || 'Napaka pri odgovoru.');
+    if (data.response) {
+      appendMsg('ai', data.response);
+    } else {
+      appendMsg('ai', '⚠️ ' + (data.error || 'Neznan odgovor od strežnika.'));
+    }
   } catch(e) {
     removeTyping(typId);
-    appendMsg('ai', 'Napaka pri povezavi s strežnikom.');
+    appendMsg('ai', '⚠️ Napaka pri povezavi: ' + e.message);
   }
 }
 
