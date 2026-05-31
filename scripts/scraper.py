@@ -298,7 +298,8 @@ try:
     # Vrne notices s publication-number; naslove potegnemo iz HTML strani
     payload = {
         "query":  "PC=44315400* OR PC=44315300* OR PC=44316000* OR PC=44532000* OR PC=44533000*",
-        "fields": ["publication-number"],
+        "fields": ["publication-number", "estimated-value", "deadline-receipt-request",
+                   "contracting-body", "title"],
         "limit":  50,
         "page":   1,
     }
@@ -330,38 +331,72 @@ try:
                     continue
 
             ext_id = "TED-" + pub
+            url    = f"https://ted.europa.eu/en/notice/{pub}"
 
-            # Potegni naslov iz notice strani
-            print(f"  Pridobivam naslov za {pub}...")
-            url = f"https://ted.europa.eu/en/notice/{pub}"
-            title = "Brez naslova"
-            try:
-                tr = requests.get(url, headers=HEADERS, timeout=15)
-                if tr.status_code == 200:
-                    tm = re.search(r'<title[^>]*>([^<]+)</title>', tr.text, re.IGNORECASE)
-                    if tm:
-                        t = unescape(tm.group(1).strip())
-                        t = re.sub(r'\s*[|\-]\s*TED.*$', '', t, flags=re.IGNORECASE).strip()
-                        if len(t) > 5:
-                            title = t
-                    if title == "Brez naslova":
-                        hm = re.search(r'<h1[^>]*>([^<]{10,})</h1>', tr.text, re.IGNORECASE)
-                        if hm:
-                            title = unescape(hm.group(1).strip())
-            except Exception as e:
-                print(f"  Napaka pri naslovu {pub}: {e}")
-            print(f"  -> {title[:60]}")
-            time.sleep(1)  # prepreči 429
+            # Potegni podatke iz API odgovora (fields v search responsu)
+            title    = None
+            narocnik = None
+            vrednost = None
+            rok      = None
+
+            # Naslov — TED API vrne kot dict {jezik: tekst}
+            title_raw = n.get("title")
+            if isinstance(title_raw, dict):
+                title = title_raw.get("SL") or title_raw.get("EN") or next(iter(title_raw.values()), None)
+            elif isinstance(title_raw, str):
+                title = title_raw
+
+            # Naročnik
+            cb = n.get("contracting-body")
+            if isinstance(cb, dict):
+                narocnik = cb.get("official-name")
+            elif isinstance(cb, list) and cb:
+                narocnik = cb[0].get("official-name") if isinstance(cb[0], dict) else None
+
+            # Vrednost (EUR)
+            ev = n.get("estimated-value")
+            if isinstance(ev, (int, float)):
+                vrednost = float(ev)
+            elif isinstance(ev, dict):
+                vrednost = float(ev.get("amount") or ev.get("value") or 0) or None
+
+            # Rok za oddajo
+            dl = n.get("deadline-receipt-request")
+            if dl:
+                rok = parse_date(str(dl)[:10])
+
+            # Če naslova ni v API, potegni iz HTML strani
+            if not title:
+                print(f"  Pridobivam naslov iz HTML za {pub}...")
+                try:
+                    tr = requests.get(url, headers=HEADERS, timeout=15)
+                    if tr.status_code == 200:
+                        tm = re.search(r'<title[^>]*>([^<]+)</title>', tr.text, re.IGNORECASE)
+                        if tm:
+                            t = unescape(tm.group(1).strip())
+                            t = re.sub(r'\s*[|\-]\s*TED.*$', '', t, flags=re.IGNORECASE).strip()
+                            if len(t) > 5:
+                                title = t
+                        if not title:
+                            hm = re.search(r'<h1[^>]*>([^<]{10,})</h1>', tr.text, re.IGNORECASE)
+                            if hm:
+                                title = unescape(hm.group(1).strip())
+                    time.sleep(1)
+                except Exception as e:
+                    print(f"  Napaka pri naslovu {pub}: {e}")
+
+            title = title or "Brez naslova"
+            print(f"  {pub}: {title[:60]} | vrednost={vrednost} | rok={rok}")
 
             razpisi.append({
                 "external_id":   ext_id,
                 "vir":           "TED",
                 "naslov":        title,
-                "narocnik":      None,
+                "narocnik":      narocnik,
                 "cpv_kode":      "44315400-1",
-                "vrednost":      None,
-                "vrednost_eur":  None,
-                "rok_za_oddajo": None,
+                "vrednost":      vrednost,
+                "vrednost_eur":  vrednost,
+                "rok_za_oddajo": rok,
                 "datum_objave":  date.today().isoformat(),
                 "link":          url,
                 "status":        "odprt",
