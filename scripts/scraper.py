@@ -370,7 +370,8 @@ except Exception as e:
 
 
 # ── Pošlji na razpismonitor.eu ────────────────────────────────────
-print(f"=== Pošiljam {len(razpisi)} razpisov na import endpoint ===")
+print(f"=== Posiljam {len(razpisi)} razpisov na import endpoint ===")
+time.sleep(10)
 shranjeni_razpisi = []
 
 try:
@@ -388,7 +389,7 @@ try:
     saved = import_resp.get("saved", 0)
     if saved > 0:
         shranjeni_razpisi = razpisi[:saved]
-        print(f"  {saved} novih razpisov — pošiljam email obvestilo...")
+        print(f"  {saved} novih razpisov — posiljam email obvestilo...")
         poslji_email(shranjeni_razpisi)
     else:
         print("  Ni novih razpisov — email ni poslan.")
