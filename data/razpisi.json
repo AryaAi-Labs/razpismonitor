@@ -1,1 +1,19 @@
-[]
+{
+  "scraped_at": "2026-06-03T12:10:03.235368",
+  "count": 1,
+  "razpisi": [
+    {
+      "external_id": "EJN-JN-74790",
+      "vir": "e-JN",
+      "naslov": "VZDRŽEVANJE IN SERVISIRANJE SISTEMOV ZA ZAGOTAVLJANJE POŽARNE VARNOSTI UKC LJUBLJANA",
+      "narocnik": "UNIVERZITETNI KLINIČNI CENTER LJUBLJANA",
+      "cpv_kode": "",
+      "vrednost": null,
+      "vrednost_eur": null,
+      "rok_za_oddajo": "2026-07-06",
+      "datum_objave": "2026-06-03",
+      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila.xhtml?oznakaJN=JN-74790",
+      "status": "odprt"
+    }
+  ]
+}
