@@ -2,8 +2,11 @@ name: RazpisMonitor Scraper
 
 on:
   schedule:
-    - cron: '0 5 * * *'   # vsak dan ob 7:00 CET (5:00 UTC)
-  workflow_dispatch:        # omogoči ročni zagon iz GitHub UI
+    - cron: '0 5 * * *'  # vsak dan ob 7:00 CET (5:00 UTC)
+  workflow_dispatch:       # omogoči ročni zagon iz GitHub UI
+
+permissions:
+  contents: write
 
 jobs:
   scrape:
@@ -25,3 +28,4 @@ jobs:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASS: ${{ secrets.GMAIL_APP_PASS }}
         run: python scripts/scraper.py
+        
