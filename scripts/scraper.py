@@ -367,7 +367,7 @@ try:
 except Exception as e:
     print(f"TED napaka (preskočen): {e}")
 
-
+time.sleep(10)
 # ── Pošlji na razpismonitor.eu ────────────────────────────────────
 print(f"=== Pošiljam {len(razpisi)} razpisov na import endpoint ===")
 shranjeni_razpisi = []  # razpisi ki jih je import dejansko shranil (novi)
