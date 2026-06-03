@@ -24,28 +24,32 @@ EMAIL_PREJEMNIKI = [
 
 CPV_KODE       = ["44315400", "44315300", "44316000", "44532000", "44533000"]
 KLJUCNE_BESEDE = [
-    # Vijaki, matice, podložke
-    "vijak", "matica", "podložk", "podlozk",
-    # Sorniki, zatičи, svorniki
-    "sornik", "svornik", "zatič", "zatic",
-    # Sidrni elementi
-    "sidrni", "sidro", "sidra",
-    # Navoji
-    "navoj", "navojna",
-    # Objemke, sponke
-    "objemka", "sponka",
-    # Pritrdilni material
-    "pritrdil", "pritrditven",
-    # Vezni elementi
-    "vezni", "veznih",
-    # Kovinski / jeklo / nerjavno
-    "kovinski", "kovinsk", "kovinar",
-    "jeklen", "jeklен", "nerjavno", "nerjaveč",
-    # Splošni kovinski deli
-    "kovinski deli", "kovinski element", "material", "deli", "elementi",
-    # Angleške besede
-    "fastener", "bolt", "nut", "screw", "washer",
-    "fitting", "connector", "clamp",
+    # ── Vijaki ─────────────────────────────────────────────
+    "vijak", "vijake", "vijakov", "vijačn",
+    # ── Matice ─────────────────────────────────────────────
+    "matica", "matice", "matic ",
+    # ── Podložke ───────────────────────────────────────────
+    "podložk", "podlozk",
+    # ── Pritrdilni material (natančno) ─────────────────────
+    "pritrdilni material", "pritrdilne elemente", "pritrdilnih elementov",
+    "pritrdilni elementi", "vezni elementi", "veznih elementov",
+    # ── Sorniki, zatiči, mozniki ───────────────────────────
+    "sornik", "svornik", "zatič", "moznik", "klin",
+    # ── Navoji, navojne palice ─────────────────────────────
+    "navojna palica", "navojne palice", "navojnih palic",
+    # ── Sidra (samo kovinska/kemična) ──────────────────────
+    "sidrni vijak", "kemično sidro", "kemična sidra", "kovinski sidri",
+    # ── Kovice ─────────────────────────────────────────────
+    "kovic", "kovica",
+    # ── Nerjavno jeklo (pritrdilni kontekst) ───────────────
+    "nerjavni vijak", "nerjavne matice", "nerjavni pritrdilni",
+    "inox vijak", "inox pritrdil",
+    # ── CPV kode (pritrdilni material) ─────────────────────
+    "44315", "44532", "44533",
+    # ── Angleščina ─────────────────────────────────────────
+    "fastener", "fasteners", "bolts and nuts", "nuts and bolts",
+    "threaded fastener", "hex bolt", "hex nut", "anchor bolt",
+    "stainless steel fastener", "din 931", "din 933", "iso 4014",
 ]
 
 HEADERS = {
@@ -379,36 +383,31 @@ except Exception as e:
 print(f"=== Pošiljam {len(razpisi)} razpisov na import endpoint ===")
 shranjeni_razpisi = []  # razpisi ki jih je import dejansko shranil (novi)
 
-if razpisi:
-    try:
-        r = requests.post(
-            IMPORT_URL,
-            json={"secret": IMPORT_SECRET, "razpisi": razpisi},
-            headers={"Content-Type": "application/json"},
-            timeout=60
-        )
-        print(f"Import HTTP {r.status_code}: {r.text[:500]}")
-        if r.status_code != 200:
-            raise SystemExit(1)
-
-        # Ugotovi koliko je bilo dejansko novih (saved > 0)
-        import_resp = r.json()
-        saved = import_resp.get("saved", 0)
-        if saved > 0:
-            # Vzemi prvih `saved` razpisov kot reprezentativne nove
-            # (import vrne samo skupno število, ne ID-jev — vzamemo vse)
-            shranjeni_razpisi = razpisi[:saved]
-            print(f"  {saved} novih razpisov — pošiljam email obvestilo...")
-            poslji_email(shranjeni_razpisi)
-        else:
-            print("  Ni novih razpisov — email ni poslan.")
-
-    except SystemExit:
-        raise
-    except Exception as e:
-        print(f"Import napaka: {e}")
+try:
+    r = requests.post(
+        IMPORT_URL,
+        json={"secret": IMPORT_SECRET, "razpisi": razpisi},
+        headers={"Content-Type": "application/json"},
+        timeout=60
+    )
+    print(f"Import HTTP {r.status_code}: {r.text[:500]}")
+    if r.status_code != 200:
         raise SystemExit(1)
-else:
-    print("Ni razpisov za uvoz.")
+
+    # Ugotovi koliko je bilo dejansko novih (saved > 0)
+    import_resp = r.json()
+    saved = import_resp.get("saved", 0)
+    if saved > 0:
+        shranjeni_razpisi = razpisi[:saved]
+        print(f"  {saved} novih razpisov — pošiljam email obvestilo...")
+        poslji_email(shranjeni_razpisi)
+    else:
+        print("  Ni novih razpisov — email ni poslan.")
+
+except SystemExit:
+    raise
+except Exception as e:
+    print(f"Import napaka: {e}")
+    raise SystemExit(1)
 
 print("=== KONEC ===")
