@@ -213,8 +213,6 @@ try:
 
     print(f"e-JN skupaj: {len(all_rows)} vrstic")
 
-    debug_printed = False  # izpiši celice samo prve ujemajoče vrstice
-
     for row in all_rows:
         # Deduplikacija po oznaki JN (ista vrstica se pojavi v več iskanjih)
         cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL | re.IGNORECASE)
@@ -244,15 +242,6 @@ try:
             match = any(k in narocnik_lower for k in KLJUCNE_BESEDE)
         if not match:
             continue
-
-        # DEBUG — izpiši vse celice prve ujemajoče vrstice
-        if not debug_printed:
-            print(f"  DEBUG prva ujemajoča vrstica ({len(cells)} celic):")
-            for i, c in enumerate(cells):
-                print(f"    cells[{i}] = {repr(c[:80])}")
-            print(f"  DEBUG rok_oddaje = {repr(rok_oddaje)}")
-            print(f"  DEBUG parse_date(rok_oddaje) = {repr(parse_date(rok_oddaje))}")
-            debug_printed = True
 
         datum_raw = datum_pjn or datum_ejn
         datum = parse_date(datum_raw)
