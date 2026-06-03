@@ -365,6 +365,9 @@ try:
         print(f"TED: {ted_new} novih, {skipped_old} preskočenih (pred 2025)")
     else:
         print(f"TED preskočen: HTTP {r.status_code} — {r.text[:300]}")
+        if r.status_code == 403:
+            print("  TED 403 — čakam 30 sekund pred importom...")
+            time.sleep(30)
 except Exception as e:
     print(f"TED napaka (preskočen): {e}")
 
