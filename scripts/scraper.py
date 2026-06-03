@@ -4,6 +4,7 @@ Scrapa e-JN in TED, pošlje razpise na razpismonitor.eu/api/import.php
 """
 import os
 import re
+import sys
 import time
 import smtplib
 import requests
@@ -370,12 +371,6 @@ except Exception as e:
 
 # ── Pošlji na razpismonitor.eu ────────────────────────────────────
 print(f"=== Pošiljam {len(razpisi)} razpisov na import endpoint ===")
-
-if not razpisi:
-    print("  Ni razpisov — preskočim import.")
-    print("=== KONEC ===")
-    import sys; sys.exit(0)
-
 shranjeni_razpisi = []
 
 try:
