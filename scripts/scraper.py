@@ -377,7 +377,7 @@ shranjeni_razpisi = []
 try:
     r = requests.post(
         IMPORT_URL,
-        json={"secret": IMPORT_SECRET, "razpisi": razpisi},
+        json={"secret": IMPORT_SECRET, "razpisi": razpisi, "ping": True},
         headers={"Content-Type": "application/json"},
         timeout=60
     )
