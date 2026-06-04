@@ -1,23 +1,18 @@
 """
 RazpisMonitor Scraper — teče na GitHub Actions.
-Scrapa e-JN in TED, zapiše direktno v MySQL bazo.
+Scrapa e-JN in TED, zapiše razpise v data/razpisi.json v GitHub repo.
+Hostinger Cron Job bere JSON vsako uro in uvaža v bazo.
 """
 import os
 import re
-import sys
 import time
 import smtplib
 import requests
-import pymysql
 from datetime import datetime, date, timedelta
 from html import unescape
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-DB_HOST = os.environ.get("DB_HOST", "")
-DB_NAME = os.environ.get("DB_NAME", "")
-DB_USER = os.environ.get("DB_USER", "")
-DB_PASS = os.environ.get("DB_PASS", "")
 GMAIL_USER = os.environ.get("GMAIL_USER", "")
 GMAIL_PASS = os.environ.get("GMAIL_APP_PASS", "")
 
@@ -375,72 +370,59 @@ except Exception as e:
     print(f"TED napaka (preskočen): {e}")
 
 
-# ── Direktna MySQL konekicja ─────────────────────────────────────
-print(f"=== Shranjujem {len(razpisi)} razpisov v bazo ===")
+# ── Zapiši razpise v GitHub repo (data/razpisi.json) ────────────
+import json, base64
 
-novi = 0
-errors = []
+print(f"=== Shranjujem {len(razpisi)} razpisov v GitHub repo ===")
+
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+GITHUB_OWNER = "AryaAi-Labs"
+GITHUB_REPO  = "razpismonitor"
+GITHUB_FILE  = "data/razpisi.json"
+
+payload_data = {
+    "scraped_at": datetime.now().isoformat(),
+    "count": len(razpisi),
+    "razpisi": razpisi,
+}
+content_b64 = base64.b64encode(
+    json.dumps(payload_data, ensure_ascii=False, indent=2).encode("utf-8")
+).decode("ascii")
+
+api_url = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/contents/{GITHUB_FILE}"
+gh_headers = {
+    "Authorization": f"Bearer {GITHUB_TOKEN}",
+    "Accept": "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+}
 
 try:
-    conn = pymysql.connect(
-        host=DB_HOST, db=DB_NAME, user=DB_USER, passwd=DB_PASS,
-        charset="utf8mb4", connect_timeout=15,
-        ssl={"ssl": True}
-    )
-    cur = conn.cursor()
+    get_r = requests.get(api_url, headers=gh_headers, timeout=15)
+    sha = get_r.json().get("sha") if get_r.status_code == 200 else None
 
-    for r in razpisi:
-        ext_id = r.get("external_id", "")
-        if not ext_id:
-            continue
-        try:
-            affected = cur.execute(
-                """INSERT IGNORE INTO razpisi
-                    (external_id, vir, naslov, narocnik, vrednost, vrednost_eur,
-                     rok_za_oddajo, datum_objave, cpv_kode, status, link, datum_zaznave)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,CURDATE())""",
-                (
-                    ext_id,
-                    r.get("vir", "e-JN"),
-                    r.get("naslov", "Brez naslova"),
-                    r.get("narocnik"),
-                    r.get("vrednost"),
-                    r.get("vrednost_eur"),
-                    r.get("rok_za_oddajo"),
-                    r.get("datum_objave"),
-                    r.get("cpv_kode", ""),
-                    r.get("status", "odprt"),
-                    r.get("link"),
-                )
-            )
-            if affected:
-                novi += 1
-        except Exception as e:
-            errors.append(f"{ext_id}: {e}")
+    body = {
+        "message": f"scraper: {len(razpisi)} razpisov {date.today().isoformat()}",
+        "content": content_b64,
+    }
+    if sha:
+        body["sha"] = sha
 
-    # Oznaci potekle
-    cur.execute("UPDATE razpisi SET status='potekel' WHERE rok_za_oddajo < CURDATE() AND status='odprt'")
+    put_r = requests.put(api_url, json=body, headers=gh_headers, timeout=30)
+    print(f"GitHub write HTTP {put_r.status_code}")
+    if put_r.status_code not in (200, 201):
+        print(f"  Napaka: {put_r.text[:300]}")
+        raise SystemExit(1)
+    print(f"  Zapisano v {GITHUB_FILE}")
 
-    # Zapisi v scraper_log
-    cur.execute(
-        "INSERT INTO scraper_log (status, finished_at, new_razpisi, started_at) VALUES ('done', NOW(), %s, NOW())",
-        (novi,)
-    )
-
-    conn.commit()
-    cur.close()
-    conn.close()
-
-    print(f"  Shranjeno: {novi} novih, {len(razpisi)-novi} preskočenih")
-    if errors:
-        print(f"  Napake: {errors[:3]}")
-
-    if novi > 0:
-        print(f"  {novi} novih razpisov — pošiljam email...")
-        poslji_email(razpisi[:novi])
-
+except SystemExit:
+    raise
 except Exception as e:
-    print(f"DB napaka: {e}")
+    print(f"GitHub write napaka: {e}")
     raise SystemExit(1)
+
+# ── Pošlji email takoj (novi razpisi = vse ki smo jih scrapal danes) ──
+if razpisi:
+    print(f"  Pošiljam email za {len(razpisi)} razpisov...")
+    poslji_email(razpisi)
 
 print("=== KONEC ===")
