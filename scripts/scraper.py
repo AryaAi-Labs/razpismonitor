@@ -1,7 +1,6 @@
 """
-RazpisMonitor Scraper — teče na GitHub Actions.
-Scrapa e-JN in TED, zapiše razpise v data/razpisi.json v GitHub repo.
-Hostinger Cron Job bere JSON vsako uro in uvaža v bazo.
+RazpisMonitor Scraper — teče na GitHub Actions, ne na Hostingerju.
+Scrapa e-JN in TED, pošlje razpise na razpismonitor.eu/api/import.php
 """
 import os
 import re
@@ -13,8 +12,10 @@ from html import unescape
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-GMAIL_USER = os.environ.get("GMAIL_USER", "")
-GMAIL_PASS = os.environ.get("GMAIL_APP_PASS", "")
+IMPORT_URL    = os.environ["IMPORT_URL"]
+IMPORT_SECRET = os.environ["IMPORT_SECRET"]
+GMAIL_USER    = os.environ.get("GMAIL_USER", "")
+GMAIL_PASS    = os.environ.get("GMAIL_APP_PASS", "")
 
 EMAIL_PREJEMNIKI = [
     "tilen.burja@kovinocrom.si",
@@ -212,6 +213,8 @@ try:
 
     print(f"e-JN skupaj: {len(all_rows)} vrstic")
 
+    debug_printed = False  # izpiši celice samo prve ujemajoče vrstice
+
     for row in all_rows:
         # Deduplikacija po oznaki JN (ista vrstica se pojavi v več iskanjih)
         cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL | re.IGNORECASE)
@@ -241,6 +244,15 @@ try:
             match = any(k in narocnik_lower for k in KLJUCNE_BESEDE)
         if not match:
             continue
+
+        # DEBUG — izpiši vse celice prve ujemajoče vrstice
+        if not debug_printed:
+            print(f"  DEBUG prva ujemajoča vrstica ({len(cells)} celic):")
+            for i, c in enumerate(cells):
+                print(f"    cells[{i}] = {repr(c[:80])}")
+            print(f"  DEBUG rok_oddaje = {repr(rok_oddaje)}")
+            print(f"  DEBUG parse_date(rok_oddaje) = {repr(parse_date(rok_oddaje))}")
+            debug_printed = True
 
         datum_raw = datum_pjn or datum_ejn
         datum = parse_date(datum_raw)
@@ -363,66 +375,39 @@ try:
         print(f"TED: {ted_new} novih, {skipped_old} preskočenih (pred 2025)")
     else:
         print(f"TED preskočen: HTTP {r.status_code} — {r.text[:300]}")
-        if r.status_code == 403:
-            print("  TED 403 — čakam 30 sekund pred importom...")
-            time.sleep(30)
 except Exception as e:
     print(f"TED napaka (preskočen): {e}")
 
 
-# ── Zapiši razpise v GitHub repo (data/razpisi.json) ────────────
-import json, base64
-
-print(f"=== Shranjujem {len(razpisi)} razpisov v GitHub repo ===")
-
-GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
-GITHUB_OWNER = "AryaAi-Labs"
-GITHUB_REPO  = "razpismonitor"
-GITHUB_FILE  = "data/razpisi.json"
-
-payload_data = {
-    "scraped_at": datetime.now().isoformat(),
-    "count": len(razpisi),
-    "razpisi": razpisi,
-}
-content_b64 = base64.b64encode(
-    json.dumps(payload_data, ensure_ascii=False, indent=2).encode("utf-8")
-).decode("ascii")
-
-api_url = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/contents/{GITHUB_FILE}"
-gh_headers = {
-    "Authorization": f"Bearer {GITHUB_TOKEN}",
-    "Accept": "application/vnd.github+json",
-    "X-GitHub-Api-Version": "2022-11-28",
-}
+# ── Pošlji na razpismonitor.eu ────────────────────────────────────
+print(f"=== Pošiljam {len(razpisi)} razpisov na import endpoint ===")
+shranjeni_razpisi = []  # razpisi ki jih je import dejansko shranil (novi)
 
 try:
-    get_r = requests.get(api_url, headers=gh_headers, timeout=15)
-    sha = get_r.json().get("sha") if get_r.status_code == 200 else None
-
-    body = {
-        "message": f"scraper: {len(razpisi)} razpisov {date.today().isoformat()}",
-        "content": content_b64,
-    }
-    if sha:
-        body["sha"] = sha
-
-    put_r = requests.put(api_url, json=body, headers=gh_headers, timeout=30)
-    print(f"GitHub write HTTP {put_r.status_code}")
-    if put_r.status_code not in (200, 201):
-        print(f"  Napaka: {put_r.text[:300]}")
+    r = requests.post(
+        IMPORT_URL,
+        json={"secret": IMPORT_SECRET, "razpisi": razpisi},
+        headers={"Content-Type": "application/json"},
+        timeout=60
+    )
+    print(f"Import HTTP {r.status_code}: {r.text[:500]}")
+    if r.status_code != 200:
         raise SystemExit(1)
-    print(f"  Zapisano v {GITHUB_FILE}")
+
+    # Ugotovi koliko je bilo dejansko novih (saved > 0)
+    import_resp = r.json()
+    saved = import_resp.get("saved", 0)
+    if saved > 0:
+        shranjeni_razpisi = razpisi[:saved]
+        print(f"  {saved} novih razpisov — pošiljam email obvestilo...")
+        poslji_email(shranjeni_razpisi)
+    else:
+        print("  Ni novih razpisov — email ni poslan.")
 
 except SystemExit:
     raise
 except Exception as e:
-    print(f"GitHub write napaka: {e}")
+    print(f"Import napaka: {e}")
     raise SystemExit(1)
-
-# ── Pošlji email takoj (novi razpisi = vse ki smo jih scrapal danes) ──
-if razpisi:
-    print(f"  Pošiljam email za {len(razpisi)} razpisov...")
-    poslji_email(razpisi)
 
 print("=== KONEC ===")
