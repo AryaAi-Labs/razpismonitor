@@ -1,6 +1,6 @@
 """
-RazpisMonitor Scraper — teče na GitHub Actions, ne na Hostingerju.
-Scrapa e-JN in TED, pošlje razpise na razpismonitor.eu/api/import.php
+RazpisMonitor Scraper — teče na GitHub Actions.
+Scrapa e-JN in TED, zapiše direktno v MySQL bazo.
 """
 import os
 import re
@@ -8,15 +8,18 @@ import sys
 import time
 import smtplib
 import requests
+import pymysql
 from datetime import datetime, date, timedelta
 from html import unescape
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-IMPORT_URL    = os.environ["IMPORT_URL"]
-IMPORT_SECRET = os.environ["IMPORT_SECRET"]
-GMAIL_USER    = os.environ.get("GMAIL_USER", "")
-GMAIL_PASS    = os.environ.get("GMAIL_APP_PASS", "")
+DB_HOST = os.environ.get("DB_HOST", "")
+DB_NAME = os.environ.get("DB_NAME", "")
+DB_USER = os.environ.get("DB_USER", "")
+DB_PASS = os.environ.get("DB_PASS", "")
+GMAIL_USER = os.environ.get("GMAIL_USER", "")
+GMAIL_PASS = os.environ.get("GMAIL_APP_PASS", "")
 
 EMAIL_PREJEMNIKI = [
     "tilen.burja@kovinocrom.si",
@@ -372,35 +375,72 @@ except Exception as e:
     print(f"TED napaka (preskočen): {e}")
 
 
-# ── Pošlji na razpismonitor.eu ────────────────────────────────────
-print(f"=== Posiljam {len(razpisi)} razpisov na import endpoint ===")
-time.sleep(10)
-shranjeni_razpisi = []
+# ── Direktna MySQL konekicja ─────────────────────────────────────
+print(f"=== Shranjujem {len(razpisi)} razpisov v bazo ===")
+
+novi = 0
+errors = []
 
 try:
-    r = requests.post(
-        IMPORT_URL,
-        json={"secret": IMPORT_SECRET, "razpisi": razpisi, "ping": True},
-        headers={"Content-Type": "application/json"},
-        timeout=60
+    conn = pymysql.connect(
+        host=DB_HOST, db=DB_NAME, user=DB_USER, passwd=DB_PASS,
+        charset="utf8mb4", connect_timeout=15,
+        ssl={"ssl": True}
     )
-    print(f"Import HTTP {r.status_code}: {r.text[:500]}")
-    if r.status_code != 200:
-        raise SystemExit(1)
+    cur = conn.cursor()
 
-    import_resp = r.json()
-    saved = import_resp.get("saved", 0)
-    if saved > 0:
-        shranjeni_razpisi = razpisi[:saved]
-        print(f"  {saved} novih razpisov — posiljam email obvestilo...")
-        poslji_email(shranjeni_razpisi)
-    else:
-        print("  Ni novih razpisov — email ni poslan.")
+    for r in razpisi:
+        ext_id = r.get("external_id", "")
+        if not ext_id:
+            continue
+        try:
+            affected = cur.execute(
+                """INSERT IGNORE INTO razpisi
+                    (external_id, vir, naslov, narocnik, vrednost, vrednost_eur,
+                     rok_za_oddajo, datum_objave, cpv_kode, status, link, datum_zaznave)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,CURDATE())""",
+                (
+                    ext_id,
+                    r.get("vir", "e-JN"),
+                    r.get("naslov", "Brez naslova"),
+                    r.get("narocnik"),
+                    r.get("vrednost"),
+                    r.get("vrednost_eur"),
+                    r.get("rok_za_oddajo"),
+                    r.get("datum_objave"),
+                    r.get("cpv_kode", ""),
+                    r.get("status", "odprt"),
+                    r.get("link"),
+                )
+            )
+            if affected:
+                novi += 1
+        except Exception as e:
+            errors.append(f"{ext_id}: {e}")
 
-except SystemExit:
-    raise
+    # Oznaci potekle
+    cur.execute("UPDATE razpisi SET status='potekel' WHERE rok_za_oddajo < CURDATE() AND status='odprt'")
+
+    # Zapisi v scraper_log
+    cur.execute(
+        "INSERT INTO scraper_log (status, finished_at, new_razpisi, started_at) VALUES ('done', NOW(), %s, NOW())",
+        (novi,)
+    )
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    print(f"  Shranjeno: {novi} novih, {len(razpisi)-novi} preskočenih")
+    if errors:
+        print(f"  Napake: {errors[:3]}")
+
+    if novi > 0:
+        print(f"  {novi} novih razpisov — pošiljam email...")
+        poslji_email(razpisi[:novi])
+
 except Exception as e:
-    print(f"Import napaka: {e}")
+    print(f"DB napaka: {e}")
     raise SystemExit(1)
 
 print("=== KONEC ===")
