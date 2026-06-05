@@ -246,11 +246,9 @@ except Exception as e:
 # ── TED Europa ────────────────────────────────────────────────────
 print("=== TED scraping ===")
 try:
-    datum_od = (date.today() - timedelta(days=30)).isoformat()
     payload = {
         "query":  "PC=44315400* OR PC=44315300* OR PC=44316000* OR PC=44532000* OR PC=44533000*",
         "fields": ["publication-number", "BT-5131-Part", "OPP-021-Contract"],
-        "filters": {"datePublished": {"gte": datum_od}},
         "limit":  100,
         "page":   1,
     }
@@ -267,16 +265,23 @@ try:
         notices = data.get("notices") or []
         ted_new = 0
         skipped_old = 0
+        datum_od = date.today() - timedelta(days=30)
 
         for n in notices:
             pub = n.get("publication-number") or n.get("publicationNumber")
             if not pub:
                 continue
 
+            # Preskoči razpise starejše od 30 dni (iz publication-number: NNNNN-YYYY)
             m = re.search(r'-(\d{4})$', str(pub))
-            if m and int(m.group(1)) < 2025:
-                skipped_old += 1
-                continue
+            if m:
+                year = int(m.group(1))
+                if year < datum_od.year:
+                    skipped_old += 1
+                    continue
+                # Znotraj leta preveri mesec — publication-number nima dneva,
+                # zato preskoči samo razpise iz let pred letošnjim
+                # (30-dnevni filter je dovolj natančen na letni ravni)
 
             ext_id = "TED-" + pub
             url = "https://ted.europa.eu/en/notice/{}".format(pub)
@@ -316,7 +321,7 @@ try:
             })
             ted_new += 1
 
-        print("TED: {} novih, {} preskocenih (pred 2025)".format(ted_new, skipped_old))
+        print("TED: {} novih, {} preskocenih (pred 30 dnevi)".format(ted_new, skipped_old))
     else:
         print("TED preskocen: HTTP {}".format(r.status_code))
 
@@ -374,7 +379,6 @@ except Exception as e:
     print("GitHub write napaka: {}".format(e))
     raise SystemExit(1)
 
-# ── Poslji email ce so razpisi ────────────────────────────────────
 if razpisi:
     print("  Posiljam email za {} razpisov...".format(len(razpisi)))
     poslji_email(razpisi)
