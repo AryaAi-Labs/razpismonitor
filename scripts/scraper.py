@@ -246,10 +246,12 @@ except Exception as e:
 # ── TED Europa ────────────────────────────────────────────────────
 print("=== TED scraping ===")
 try:
+    datum_od = (date.today() - timedelta(days=30)).isoformat()
     payload = {
         "query":  "PC=44315400* OR PC=44315300* OR PC=44316000* OR PC=44532000* OR PC=44533000*",
         "fields": ["publication-number", "BT-5131-Part", "OPP-021-Contract"],
-        "limit":  50,
+        "filters": {"datePublished": {"gte": datum_od}},
+        "limit":  100,
         "page":   1,
     }
     r = requests.post(
