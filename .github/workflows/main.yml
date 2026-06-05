@@ -1,23 +1,30 @@
 name: RazpisMonitor Scraper
+
 on:
   schedule:
-    - cron: '0 5 * * *'
-  workflow_dispatch:
+    - cron: '0 5 * * *'   # vsak dan ob 7:00 CET (5:00 UTC)
+  workflow_dispatch:        # rocni zagon iz GitHub UI
+
+permissions:
+  contents: write
+
 jobs:
   scrape:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
       - name: Install dependencies
         run: pip install requests
+
       - name: Run scraper
         env:
-          IMPORT_URL: ${{ secrets.IMPORT_URL }}
-          IMPORT_SECRET: ${{ secrets.IMPORT_SECRET }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASS: ${{ secrets.GMAIL_APP_PASS }}
         run: python scripts/scraper.py
