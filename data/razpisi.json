@@ -1,45 +1,5 @@
 {
-  "scraped_at": "2026-06-04T13:55:23.268204",
-  "count": 3,
-  "razpisi": [
-    {
-      "external_id": "EJN-JN-74939",
-      "vir": "e-JN",
-      "naslov": "Preureditev prostorov v OP bloku v UKC Maribor - ponovitev",
-      "narocnik": "UNIVERZITETNI KLINIČNI CENTER MARIBOR",
-      "cpv_kode": "",
-      "vrednost": null,
-      "vrednost_eur": null,
-      "rok_za_oddajo": "2026-06-17",
-      "datum_objave": "2026-06-04",
-      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila.xhtml?oznakaJN=JN-74939",
-      "status": "odprt"
-    },
-    {
-      "external_id": "EJN-JN-74005",
-      "vir": "e-JN",
-      "naslov": "PRIPRAVA PROSTOROV ZA ROBOTA ZA CITOSTATIKE ZA LEKARNO UKC Ljubljana, ponovitev",
-      "narocnik": "UNIVERZITETNI KLINIČNI CENTER LJUBLJANA",
-      "cpv_kode": "",
-      "vrednost": null,
-      "vrednost_eur": null,
-      "rok_za_oddajo": "2026-06-19",
-      "datum_objave": "2026-05-20",
-      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila.xhtml?oznakaJN=JN-74005",
-      "status": "odprt"
-    },
-    {
-      "external_id": "EJN-JN-74830",
-      "vir": "e-JN",
-      "naslov": "MLEČNE FORMULE IN ENTERALNA PREHRANA",
-      "narocnik": "UNIVERZITETNI KLINIČNI CENTER MARIBOR",
-      "cpv_kode": "",
-      "vrednost": null,
-      "vrednost_eur": null,
-      "rok_za_oddajo": "2026-07-07",
-      "datum_objave": "2026-06-04",
-      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila.xhtml?oznakaJN=JN-74830",
-      "status": "odprt"
-    }
-  ]
+  "scraped_at": "2026-06-05T12:31:50.524364",
+  "count": 0,
+  "razpisi": []
 }
