@@ -1,10 +1,13 @@
 """
-RazpisMonitor Scraper — teče na GitHub Actions, ne na Hostingerju.
-Scrapa e-JN in TED, pošlje razpise na razpismonitor.eu/api/import.php
+RazpisMonitor Scraper — tece na GitHub Actions.
+Scrapa e-JN in TED, zapise razpise v data/razpisi.json v GitHub repo.
+Hostinger Cron Job bere JSON vsako uro in uvaza v bazo.
 """
 import os
 import re
 import time
+import json
+import base64
 import smtplib
 import requests
 from datetime import datetime, date, timedelta
@@ -12,44 +15,30 @@ from html import unescape
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-IMPORT_URL    = os.environ["IMPORT_URL"]
-IMPORT_SECRET = os.environ["IMPORT_SECRET"]
-GMAIL_USER    = os.environ.get("GMAIL_USER", "")
-GMAIL_PASS    = os.environ.get("GMAIL_APP_PASS", "")
+GMAIL_USER = os.environ.get("GMAIL_USER", "")
+GMAIL_PASS = os.environ.get("GMAIL_APP_PASS", "")
 
 EMAIL_PREJEMNIKI = [
     "tilen.burja@kovinocrom.si",
     "ploncaric@gmail.com",
 ]
 
-CPV_KODE       = ["44315400", "44315300", "44316000", "44532000", "44533000"]
+CPV_KODE = ["44315400", "44315300", "44316000", "44532000", "44533000"]
+
 KLJUCNE_BESEDE = [
-    # ── Vijaki ─────────────────────────────────────────────
-    "vijak", "vijake", "vijakov", "vijačn",
-    # ── Matice ─────────────────────────────────────────────
-    "matica", "matice", "matic ",
-    # ── Podložke ───────────────────────────────────────────
-    "podložk", "podlozk",
-    # ── Pritrdilni material (natančno) ─────────────────────
+    "vijak", "vijake", "vijakov",
+    "matica", "matice",
+    "podlozk", "podlozke",
     "pritrdilni material", "pritrdilne elemente", "pritrdilnih elementov",
     "pritrdilni elementi", "vezni elementi", "veznih elementov",
-    # ── Sorniki, zatiči, mozniki ───────────────────────────
-    "sornik", "svornik", "zatič", "moznik", "klin",
-    # ── Navoji, navojne palice ─────────────────────────────
-    "navojna palica", "navojne palice", "navojnih palic",
-    # ── Sidra (samo kovinska/kemična) ──────────────────────
-    "sidrni vijak", "kemično sidro", "kemična sidra", "kovinski sidri",
-    # ── Kovice ─────────────────────────────────────────────
-    "kovic", "kovica",
-    # ── Nerjavno jeklo (pritrdilni kontekst) ───────────────
-    "nerjavni vijak", "nerjavne matice", "nerjavni pritrdilni",
-    "inox vijak", "inox pritrdil",
-    # ── CPV kode (pritrdilni material) ─────────────────────
+    "sornik", "svornik", "zatic", "moznik",
+    "navojna palica", "navojne palice",
+    "sidrni vijak", "kemicno sidro", "kovinski sidri",
+    "kovica", "kovic",
+    "nerjavni vijak", "nerjavne matice", "inox vijak",
     "44315", "44532", "44533",
-    # ── Angleščina ─────────────────────────────────────────
     "fastener", "fasteners", "bolts and nuts", "nuts and bolts",
-    "threaded fastener", "hex bolt", "hex nut", "anchor bolt",
-    "stainless steel fastener", "din 931", "din 933", "iso 4014",
+    "hex bolt", "hex nut", "anchor bolt",
 ]
 
 HEADERS = {
@@ -58,124 +47,104 @@ HEADERS = {
     "Accept-Language": "sl-SI,sl;q=0.9,en-US;q=0.8,en;q=0.7",
 }
 
-DATE_FROM = date.today() - timedelta(days=30)
-
 razpisi = []
 
 
-def parse_date(d: str | None) -> str | None:
-    """Normalizira datum v YYYY-MM-DD.
-    Podpira formate: DD.MM.YYYY, D. M. YYYY, D. M. YYYY HH:MM, YYYY-MM-DD...
-    """
+def parse_date(d):
     if not d:
         return None
     d = d.strip()
-    # DD.MM.YYYY ali D. M. YYYY (z ali brez presledkov, z ali brez ure)
     m = re.match(r'^(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})', d)
     if m:
-        return f"{m.group(3)}-{m.group(2).zfill(2)}-{m.group(1).zfill(2)}"
+        return "{}-{:02d}-{:02d}".format(m.group(3), int(m.group(2)), int(m.group(1)))
     try:
         return datetime.fromisoformat(d[:10]).date().isoformat()
     except Exception:
         return None
 
 
-def poslji_email(novi_razpisi: list) -> None:
-    """Pošlje HTML email obvestilo za nove razpise."""
+def poslji_email(novi_razpisi):
     if not GMAIL_USER or not GMAIL_PASS:
-        print("  Email: GMAIL_USER ali GMAIL_APP_PASS nista nastavljena — preskočeno")
+        print("  Email: GMAIL_USER ali GMAIL_APP_PASS nista nastavljena")
         return
     if not novi_razpisi:
         return
 
     stevilo = len(novi_razpisi)
-    zadeva = f"🔔 RazpisMonitor: {stevilo} nov{'i razpis' if stevilo == 1 else 'i razpisi'} za Kovinocrom"
+    zadeva = "RazpisMonitor: {} nov{} za Kovinocrom".format(
+        stevilo, "i razpis" if stevilo == 1 else "i razpisi"
+    )
 
-    # Sestavi HTML za vsak razpis
     razpisi_html = ""
     for r in novi_razpisi:
-        rok = r.get("rok_za_oddajo") or "—"
-        narocnik = r.get("narocnik") or "—"
+        rok = r.get("rok_za_oddajo") or "-"
+        narocnik = r.get("narocnik") or "-"
         link = r.get("link") or "#"
         vir = r.get("vir", "")
-        razpisi_html += f"""
+        naslov = r.get("naslov", "Brez naslova")
+        razpisi_html += """
         <div style="background:#f8f9fa;border-left:4px solid #2563eb;
                     border-radius:6px;padding:16px 20px;margin-bottom:16px;">
-          <div style="font-size:11px;color:#6b7280;text-transform:uppercase;
-                      letter-spacing:0.05em;margin-bottom:6px;">{vir}</div>
-          <div style="font-size:16px;font-weight:600;color:#111827;margin-bottom:8px;">
-            {r.get("naslov","Brez naslova")}
-          </div>
-          <table style="font-size:13px;color:#374151;border-collapse:collapse;">
+          <div style="font-size:11px;color:#6b7280;text-transform:uppercase;">{}</div>
+          <div style="font-size:16px;font-weight:600;color:#111827;margin-bottom:8px;">{}</div>
+          <table style="font-size:13px;color:#374151;">
             <tr>
-              <td style="padding:2px 12px 2px 0;color:#6b7280;white-space:nowrap;">Naročnik</td>
-              <td style="padding:2px 0;">{narocnik}</td>
+              <td style="padding:2px 12px 2px 0;color:#6b7280;">Narocnik</td>
+              <td>{}</td>
             </tr>
             <tr>
-              <td style="padding:2px 12px 2px 0;color:#6b7280;white-space:nowrap;">Rok za oddajo</td>
-              <td style="padding:2px 0;font-weight:600;color:#dc2626;">{rok}</td>
+              <td style="padding:2px 12px 2px 0;color:#6b7280;">Rok za oddajo</td>
+              <td style="font-weight:600;color:#dc2626;">{}</td>
             </tr>
           </table>
-          <a href="{link}" style="display:inline-block;margin-top:12px;padding:8px 16px;
+          <a href="{}" style="display:inline-block;margin-top:12px;padding:8px 16px;
              background:#2563eb;color:#fff;text-decoration:none;border-radius:5px;
-             font-size:13px;font-weight:500;">Odpri razpis →</a>
-        </div>"""
+             font-size:13px;">Odpri razpis</a>
+        </div>""".format(vir, naslov, narocnik, rok, link)
 
-    html_body = f"""<!DOCTYPE html>
+    html_body = """<!DOCTYPE html>
 <html lang="sl">
 <head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,sans-serif;">
   <div style="max-width:600px;margin:32px auto;background:#fff;
               border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
-
-    <!-- Header -->
     <div style="background:#1e3a5f;padding:24px 28px;">
-      <div style="font-size:20px;font-weight:700;color:#fff;letter-spacing:-0.3px;">
-        📋 RazpisMonitor
-      </div>
+      <div style="font-size:20px;font-weight:700;color:#fff;">RazpisMonitor</div>
       <div style="font-size:13px;color:#93c5fd;margin-top:4px;">
-        Sistem za spremljanje javnih razpisov · Kovinocrom d.o.o.
+        Sistem za spremljanje javnih razpisov - Kovinocrom d.o.o.
       </div>
     </div>
-
-    <!-- Body -->
     <div style="padding:24px 28px;">
       <p style="font-size:15px;color:#111827;margin:0 0 20px;">
-        Danes smo zaznali <strong>{stevilo} nov{'i razpis' if stevilo == 1 else 'e razpise'}</strong>,
+        Danes smo zaznali <strong>{} nov{}</strong>,
         ki ustrezajo iskalnim kriterijem za Kovinocrom:
       </p>
-
-      {razpisi_html}
-
+      {}
       <p style="font-size:12px;color:#9ca3af;margin-top:24px;padding-top:16px;
                 border-top:1px solid #e5e7eb;">
         Obvestilo je bilo samodejno generirano s sistemom RazpisMonitor.<br>
-        Za pregled vseh razpisov obiščite
         <a href="https://razpismonitor.eu" style="color:#2563eb;">razpismonitor.eu</a>
       </p>
     </div>
   </div>
 </body>
-</html>"""
+</html>""".format(stevilo, "i razpis" if stevilo == 1 else "e razpise", razpisi_html)
 
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = zadeva
-        msg["From"]    = f"RazpisMonitor <{GMAIL_USER}>"
-        msg["To"]      = ", ".join(EMAIL_PREJEMNIKI)
+        msg["From"] = "RazpisMonitor <{}>".format(GMAIL_USER)
+        msg["To"] = ", ".join(EMAIL_PREJEMNIKI)
         msg.attach(MIMEText(html_body, "html", "utf-8"))
-
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
             smtp.login(GMAIL_USER, GMAIL_PASS)
             smtp.sendmail(GMAIL_USER, EMAIL_PREJEMNIKI, msg.as_string())
-
-        print(f"  Email poslan na: {', '.join(EMAIL_PREJEMNIKI)}")
+        print("  Email poslan na: {}".format(", ".join(EMAIL_PREJEMNIKI)))
     except Exception as e:
-        print(f"  Email napaka: {e}")
+        print("  Email napaka: {}".format(e))
 
 
-def clean(s: str | None) -> str:
-    """Odstrani HTML entitete in odvečne presledke."""
+def clean(s):
     if not s:
         return ""
     return unescape(re.sub(r'\s+', ' ', s)).strip()
@@ -183,8 +152,8 @@ def clean(s: str | None) -> str:
 
 EJN_BASE = "https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila.xhtml"
 
-def ejn_parse_rows(html: str) -> list:
-    """Razčleni vrstice tabele iz HTML strani e-JN."""
+
+def ejn_parse_rows(html):
     return re.findall(
         r'<tr[^>]*class="[^"]*(?:odd|even|dataRow)[^"]*"[^>]*>(.*?)</tr>',
         html, re.DOTALL | re.IGNORECASE
@@ -192,40 +161,30 @@ def ejn_parse_rows(html: str) -> list:
 
 
 # ── e-JN Slovenija ────────────────────────────────────────────────
-# Opomba: e-JN uporablja JSF z dinamično renderiranimi iskalnimi polji.
-# GET paginacija ne deluje. Scraper zajame 50 najnovejših razpisov/dan
-# in filtrira po ključnih besedah. Ker tečemo vsak dan in razpisi trajajo
-# 2-4 tedne, relevantnih razpisov ne zamudimo.
 print("=== e-JN scraping ===")
 try:
-    ejn_count    = 0
-    all_rows     = []
+    ejn_count = 0
+    all_rows = []
     seen_ext_ids = set()
 
     r0 = requests.get(EJN_BASE, headers=HEADERS, timeout=30)
-    print(f"e-JN GET: HTTP {r0.status_code}, {len(r0.content)} bytov")
+    print("e-JN GET: HTTP {}, {} bytov".format(r0.status_code, len(r0.content)))
 
     if r0.status_code == 200:
         all_rows = ejn_parse_rows(r0.text)
-        print(f"  Najdenih {len(all_rows)} vrstic")
+        print("  Najdenih {} vrstic".format(len(all_rows)))
     else:
-        print(f"  Napaka: HTTP {r0.status_code}")
+        print("  Napaka: HTTP {}".format(r0.status_code))
 
-    print(f"e-JN skupaj: {len(all_rows)} vrstic")
-
-    debug_printed = False  # izpiši celice samo prve ujemajoče vrstice
+    print("e-JN skupaj: {} vrstic".format(len(all_rows)))
 
     for row in all_rows:
-        # Deduplikacija po oznaki JN (ista vrstica se pojavi v več iskanjih)
         cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL | re.IGNORECASE)
         cells = [clean(re.sub(r'<[^>]+>', ' ', c)) for c in cells]
 
         if len(cells) < 3:
             continue
 
-        # Stolpci: [0] Naročnik | [1] Naziv | [2] Oznaka JN | [3] Vrsta postopka |
-        #          [4] Datum eJN | [5] Številka na PJN | [6] Datum objave na PJN |
-        #          [7] Rok za oddajo | [8] Odpiranje ponudb | [9] Stanje JN
         narocnik   = cells[0] if len(cells) > 0 else ""
         naziv      = cells[1] if len(cells) > 1 else ""
         oznaka     = cells[2] if len(cells) > 2 else ""
@@ -237,7 +196,7 @@ try:
         if not naziv or not oznaka:
             continue
 
-        naziv_lower    = naziv.lower()
+        naziv_lower = naziv.lower()
         narocnik_lower = narocnik.lower()
         match = any(k in naziv_lower for k in KLJUCNE_BESEDE)
         if not match:
@@ -245,21 +204,10 @@ try:
         if not match:
             continue
 
-        # DEBUG — izpiši vse celice prve ujemajoče vrstice
-        if not debug_printed:
-            print(f"  DEBUG prva ujemajoča vrstica ({len(cells)} celic):")
-            for i, c in enumerate(cells):
-                print(f"    cells[{i}] = {repr(c[:80])}")
-            print(f"  DEBUG rok_oddaje = {repr(rok_oddaje)}")
-            print(f"  DEBUG parse_date(rok_oddaje) = {repr(parse_date(rok_oddaje))}")
-            debug_printed = True
-
         datum_raw = datum_pjn or datum_ejn
         datum = parse_date(datum_raw)
-
         ext_id = "EJN-" + re.sub(r'[^A-Za-z0-9_-]', '_', oznaka)
 
-        # Preskoči duplikate iz različnih iskanj
         if ext_id in seen_ext_ids:
             continue
         seen_ext_ids.add(ext_id)
@@ -272,7 +220,7 @@ try:
             href = link_match.group(1)
             link = ("https://ejn.gov.si" + href) if href.startswith("/") else href
         else:
-            link = f"https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila.xhtml?oznakaJN={oznaka}"
+            link = "https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila.xhtml?oznakaJN={}".format(oznaka)
 
         razpisi.append({
             "external_id":   ext_id,
@@ -285,21 +233,19 @@ try:
             "rok_za_oddajo": parse_date(rok_oddaje),
             "datum_objave":  datum,
             "link":          link,
-            "status":        "odprt" if stanje.lower() not in ("zaključen", "preklican") else stanje.lower(),
+            "status":        "odprt" if stanje.lower() not in ("zakljucen", "preklican") else stanje.lower(),
         })
         ejn_count += 1
 
-    print(f"e-JN: {ejn_count} ujemajočih razpisov")
+    print("e-JN: {} ujemajocih razpisov".format(ejn_count))
 
 except Exception as e:
-    print(f"e-JN napaka: {e}")
+    print("e-JN napaka: {}".format(e))
 
 
 # ── TED Europa ────────────────────────────────────────────────────
 print("=== TED scraping ===")
 try:
-    # TED API v3 — keyword search po opisnih besedah
-    # Vrne notices s publication-number; naslove potegnemo iz HTML strani
     payload = {
         "query":  "PC=44315400* OR PC=44315300* OR PC=44316000* OR PC=44532000* OR PC=44533000*",
         "fields": ["publication-number", "BT-5131-Part", "OPP-021-Contract"],
@@ -312,10 +258,10 @@ try:
         headers={**HEADERS, "Content-Type": "application/json"},
         timeout=30
     )
-    print(f"TED v3 POST HTTP {r.status_code}")
+    print("TED v3 POST HTTP {}".format(r.status_code))
 
     if r.status_code == 200:
-        data    = r.json()
+        data = r.json()
         notices = data.get("notices") or []
         ted_new = 0
         skipped_old = 0
@@ -325,19 +271,15 @@ try:
             if not pub:
                 continue
 
-            # Preskoči stare razpise — samo 2025 in 2026
             m = re.search(r'-(\d{4})$', str(pub))
-            if m:
-                year = int(m.group(1))
-                if year < 2025:
-                    skipped_old += 1
-                    continue
+            if m and int(m.group(1)) < 2025:
+                skipped_old += 1
+                continue
 
             ext_id = "TED-" + pub
-            url    = f"https://ted.europa.eu/en/notice/{pub}"
+            url = "https://ted.europa.eu/en/notice/{}".format(pub)
 
-            # Potegni naslov iz HTML strani
-            print(f"  Pridobivam naslov za {pub}...")
+            print("  Pridobivam naslov za {}...".format(pub))
             title = "Brez naslova"
             try:
                 tr = requests.get(url, headers=HEADERS, timeout=15)
@@ -353,9 +295,9 @@ try:
                         if hm:
                             title = unescape(hm.group(1).strip())
             except Exception as e:
-                print(f"  Napaka pri naslovu {pub}: {e}")
-            print(f"  -> {title[:60]}")
-            time.sleep(1)  # prepreči 429
+                print("  Napaka pri naslovu {}: {}".format(pub, e))
+            print("  -> {}".format(title[:60]))
+            time.sleep(1)
 
             razpisi.append({
                 "external_id":   ext_id,
@@ -372,42 +314,67 @@ try:
             })
             ted_new += 1
 
-        print(f"TED: {ted_new} novih, {skipped_old} preskočenih (pred 2025)")
+        print("TED: {} novih, {} preskocenih (pred 2025)".format(ted_new, skipped_old))
     else:
-        print(f"TED preskočen: HTTP {r.status_code} — {r.text[:300]}")
+        print("TED preskocen: HTTP {}".format(r.status_code))
+
 except Exception as e:
-    print(f"TED napaka (preskočen): {e}")
+    print("TED napaka (preskocen): {}".format(e))
 
 
-# ── Pošlji na razpismonitor.eu ────────────────────────────────────
-print(f"=== Pošiljam {len(razpisi)} razpisov na import endpoint ===")
-shranjeni_razpisi = []  # razpisi ki jih je import dejansko shranil (novi)
+# ── Zapisi v GitHub repo (data/razpisi.json) ─────────────────────
+print("=== Shranjujem {} razpisov v GitHub repo ===".format(len(razpisi)))
+
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+GITHUB_OWNER = "AryaAi-Labs"
+GITHUB_REPO  = "razpismonitor"
+GITHUB_FILE  = "data/razpisi.json"
+
+payload_data = {
+    "scraped_at": datetime.now().isoformat(),
+    "count": len(razpisi),
+    "razpisi": razpisi,
+}
+content_b64 = base64.b64encode(
+    json.dumps(payload_data, ensure_ascii=False, indent=2).encode("utf-8")
+).decode("ascii")
+
+api_url = "https://api.github.com/repos/{}/{}/contents/{}".format(
+    GITHUB_OWNER, GITHUB_REPO, GITHUB_FILE
+)
+gh_headers = {
+    "Authorization": "Bearer {}".format(GITHUB_TOKEN),
+    "Accept": "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+}
 
 try:
-    r = requests.post(
-        IMPORT_URL,
-        json={"secret": IMPORT_SECRET, "razpisi": razpisi},
-        headers={"Content-Type": "application/json"},
-        timeout=60
-    )
-    print(f"Import HTTP {r.status_code}: {r.text[:500]}")
-    if r.status_code != 200:
-        raise SystemExit(1)
+    get_r = requests.get(api_url, headers=gh_headers, timeout=15)
+    sha = get_r.json().get("sha") if get_r.status_code == 200 else None
 
-    # Ugotovi koliko je bilo dejansko novih (saved > 0)
-    import_resp = r.json()
-    saved = import_resp.get("saved", 0)
-    if saved > 0:
-        shranjeni_razpisi = razpisi[:saved]
-        print(f"  {saved} novih razpisov — pošiljam email obvestilo...")
-        poslji_email(shranjeni_razpisi)
-    else:
-        print("  Ni novih razpisov — email ni poslan.")
+    body = {
+        "message": "scraper: {} razpisov {}".format(len(razpisi), date.today().isoformat()),
+        "content": content_b64,
+    }
+    if sha:
+        body["sha"] = sha
+
+    put_r = requests.put(api_url, json=body, headers=gh_headers, timeout=30)
+    print("GitHub write HTTP {}".format(put_r.status_code))
+    if put_r.status_code not in (200, 201):
+        print("  Napaka: {}".format(put_r.text[:300]))
+        raise SystemExit(1)
+    print("  Zapisano v {}".format(GITHUB_FILE))
 
 except SystemExit:
     raise
 except Exception as e:
-    print(f"Import napaka: {e}")
+    print("GitHub write napaka: {}".format(e))
     raise SystemExit(1)
+
+# ── Poslji email ce so razpisi ────────────────────────────────────
+if razpisi:
+    print("  Posiljam email za {} razpisov...".format(len(razpisi)))
+    poslji_email(razpisi)
 
 print("=== KONEC ===")
