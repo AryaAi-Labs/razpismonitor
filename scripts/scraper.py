@@ -251,7 +251,6 @@ try:
         "fields": ["publication-number", "BT-5131-Part", "OPP-021-Contract"],
         "limit":  100,
         "page":   1,
-        "sort":   [{"field": "publication-date", "order": "desc"}],
     }
     r = requests.post(
         "https://api.ted.europa.eu/v3/notices/search",
