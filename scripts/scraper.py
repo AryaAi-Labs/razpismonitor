@@ -271,6 +271,8 @@ try:
 
         for n in notices:
             pub = n.get("publication-number") or n.get("publicationNumber")
+            if ted_new == 0 and skipped_old < 3:
+                print("  DEBUG pub example: {}".format(pub))
             if not pub:
                 continue
 
