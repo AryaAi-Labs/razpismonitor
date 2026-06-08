@@ -19,7 +19,7 @@ GMAIL_USER = os.environ.get("GMAIL_USER", "")
 GMAIL_PASS = os.environ.get("GMAIL_APP_PASS", "")
 
 EMAIL_PREJEMNIKI = [
-    "burja.tilen@kovinocrom.si",
+    "tilen.burja@kovinocrom.si",
     "ploncaric@gmail.com",
 ]
 
@@ -247,7 +247,7 @@ except Exception as e:
 print("=== TED scraping ===")
 try:
     payload = {
-        "query":  "PC=44315400* OR PC=44315300* OR PC=44316000* OR PC=44532000* OR PC=44533000*",
+        "query":  "fasteners OR bolts OR nuts OR \"pritrdilni material\" OR vijaki OR matice OR \"anchor bolts\" OR \"hex bolts\"",
         "fields": ["publication-number", "BT-5131-Part", "OPP-021-Contract"],
         "limit":  100,
         "page":   1,
