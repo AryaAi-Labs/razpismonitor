@@ -259,6 +259,8 @@ try:
         timeout=30
     )
     print("TED v3 POST HTTP {}".format(r.status_code))
+    if r.status_code != 200:
+        print("TED napaka response: {}".format(r.text[:500]))
 
     if r.status_code == 200:
         data = r.json()
