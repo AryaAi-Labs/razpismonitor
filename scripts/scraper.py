@@ -274,16 +274,13 @@ try:
             if not pub:
                 continue
 
-            # Preskoči razpise starejše od 30 dni (iz publication-number: NNNNN-YYYY)
+            # Sprejmi razpise iz let 2025 in 2026 (iz publication-number: NNNNN-YYYY)
             m = re.search(r'-(\d{4})$', str(pub))
             if m:
                 year = int(m.group(1))
-                if year < datum_od.year:
+                if year < 2025:
                     skipped_old += 1
                     continue
-                # Znotraj leta preveri mesec — publication-number nima dneva,
-                # zato preskoči samo razpise iz let pred letošnjim
-                # (30-dnevni filter je dovolj natančen na letni ravni)
 
             ext_id = "TED-" + pub
             url = "https://ted.europa.eu/en/notice/{}".format(pub)
