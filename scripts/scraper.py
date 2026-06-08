@@ -247,7 +247,7 @@ except Exception as e:
 print("=== TED scraping ===")
 try:
     payload = {
-        "query":  "fasteners OR bolts OR nuts OR \"pritrdilni material\" OR vijaki OR matice OR \"anchor bolts\" OR \"hex bolts\"",
+        "query":  "fasteners OR bolts OR nuts OR pritrdilni OR vijaki OR matice OR anchor OR hex",
         "fields": ["publication-number", "BT-5131-Part", "OPP-021-Contract"],
         "limit":  100,
         "page":   1,
