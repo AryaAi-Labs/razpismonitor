@@ -39,6 +39,19 @@ KLJUCNE_BESEDE = [
     "44315", "44532", "44533",
     "fastener", "fasteners", "bolts and nuts", "nuts and bolts",
     "hex bolt", "hex nut", "anchor bolt",
+    "dobava materiala",
+    "tehnicni material",
+    "drobni material",
+    "potrosni material",
+    "gradbeni material",
+    "kovinski material",
+    "jekleni",
+    "nerjavno",
+    "pritrdila",
+    "spojni",
+    "vijacni",
+    "sidranje",
+    "sidra",
 ]
 
 HEADERS = {
