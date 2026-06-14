@@ -72,6 +72,14 @@ KLJUCNE_BESEDE = [
     "pritrdilni",
     "spojni material",
     "tehnicni vijaki",
+    "drobno blago",
+    "montazni material",
+    "material za",
+    "dobava blaga",
+    "kovinski",
+    "pritrditev",
+    "pricvrstitev",
+    "privijacenje",
 ]
 
 HEADERS = {
