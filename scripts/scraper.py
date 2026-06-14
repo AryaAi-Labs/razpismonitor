@@ -80,6 +80,23 @@ KLJUCNE_BESEDE = [
     "pritrditev",
     "pricvrstitev",
     "privijacenje",
+    "material in oprema",
+    "blago in material",
+    "sukcesivna dobava",
+    "okvirni sporazum dobava",
+    "drobni inventar",
+    "pomozni material",
+    "rezervni deli",
+    "nadomestni deli",
+    "vzdrzevanje in material",
+    "material za gradnjo",
+    "elektro material",
+    "instalacijski material",
+    "hidravlicni material",
+    "pnevmatski material",
+    "industrijski material",
+    "material za industrijsko",
+    "dobava in montaza",
 ]
 
 HEADERS = {
