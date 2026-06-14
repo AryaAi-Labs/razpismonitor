@@ -1,5 +1,45 @@
 {
-  "scraped_at": "2026-06-14T09:20:07.436342",
-  "count": 0,
-  "razpisi": []
+  "scraped_at": "2026-06-14T09:24:34.680210",
+  "count": 3,
+  "razpisi": [
+    {
+      "external_id": "EJN-JN-75148",
+      "vir": "e-JN",
+      "naslov": "Sukcesivna dobava pralnih sredstev, čistil in papirne galanterije za obdobje 36 mesecev",
+      "narocnik": "CENTER ZA USPOSABLJANJE, DELO IN VARSTVO DOBRNA",
+      "cpv_kode": "",
+      "vrednost": null,
+      "vrednost_eur": null,
+      "rok_za_oddajo": "2026-06-24",
+      "datum_objave": "2026-06-12",
+      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila.xhtml?oznakaJN=JN-75148",
+      "status": "odprt"
+    },
+    {
+      "external_id": "EJN-JN-75226",
+      "vir": "e-JN",
+      "naslov": "Sukcesivna dobava konvencionalnih in ekoloških živil",
+      "narocnik": "OSNOVNA ŠOLA OB RINŽI KOČEVJE",
+      "cpv_kode": "",
+      "vrednost": null,
+      "vrednost_eur": null,
+      "rok_za_oddajo": "2026-07-16",
+      "datum_objave": "2026-06-12",
+      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila.xhtml?oznakaJN=JN-75226",
+      "status": "odprt"
+    },
+    {
+      "external_id": "EJN-JN-75237",
+      "vir": "e-JN",
+      "naslov": "Sukcesivna dobava potrošnega materiala za patologijo",
+      "narocnik": "SPLOŠNA BOLNIŠNICA IZOLA OSPEDALE GENERALE ISOLA",
+      "cpv_kode": "",
+      "vrednost": null,
+      "vrednost_eur": null,
+      "rok_za_oddajo": "2026-07-13",
+      "datum_objave": "2026-06-12",
+      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila.xhtml?oznakaJN=JN-75237",
+      "status": "odprt"
+    }
+  ]
 }
