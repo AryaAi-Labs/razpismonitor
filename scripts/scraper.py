@@ -330,12 +330,6 @@ try:
     print("TED search HTTP {}".format(r.status_code))
     if r.status_code == 200:
         data = r.json()
-        notices = data.get("notices") or []
-        if notices:
-            print("TED PRVI NOTICE:", json.dumps(notices[0], indent=2)[:2000])
-
-    if r.status_code == 200:
-        data = r.json()
         notices = data.get("results") or data.get("notices") or []
         ted_new = 0
 
@@ -364,6 +358,7 @@ try:
                 time.sleep(1)
             except Exception as e:
                 print("  Napaka pri naslovu {}: {}".format(pub, e))
+            print("  TED {}: {}".format(pub, title[:80]))
             deadline = n.get("deadline-date") or None
             url = "https://ted.europa.eu/en/notice/{}".format(pub)
 
