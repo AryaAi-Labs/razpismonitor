@@ -345,7 +345,7 @@ try:
                 country = countries[0]
             title = "Brez naslova"
             try:
-                html_url = "https://ted.europa.eu/en/notice/{}".format(pub)
+                html_url = "https://ted.europa.eu/en/notice/-/detail/{}".format(pub)
                 tr = requests.get(html_url, headers=HEADERS, timeout=15)
                 if tr.status_code == 200:
                     tm = re.search(r'<title[^>]*>([^<]+)</title>', tr.text, re.IGNORECASE)
@@ -360,7 +360,7 @@ try:
                 print("  Napaka pri naslovu {}: {}".format(pub, e))
             print("  TED {}: {}".format(pub, title[:80]))
             deadline = n.get("deadline-date") or None
-            url = "https://ted.europa.eu/en/notice/{}".format(pub)
+            url = "https://ted.europa.eu/en/notice/-/detail/{}".format(pub)
 
             razpisi.append({
                 "external_id": ext_id,
