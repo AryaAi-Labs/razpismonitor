@@ -318,7 +318,7 @@ try:
     r = requests.post(
         ted_url,
         json={
-            "query": "FT ~ \"bolt*\" AND notice-type = (cn-standard) AND PD >= 20260101",
+            "query": "(FT ~ \"bolt*\" OR FT ~ \"fastener*\" OR FT ~ \"screw*\" OR FT ~ \"nut*\") AND notice-type = (cn-standard) AND PD >= 20260101",
             "fields": ["publication-number", "OPP-021-Contract", "BT-5131-Part", "deadline-receipt-tender-date-lot", "organisation-country-buyer", "description-glo"],
             "limit": 50,
             "page": 1,
