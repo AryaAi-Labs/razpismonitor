@@ -329,6 +329,8 @@ try:
     )
     print("TED search HTTP {}".format(r.status_code))
     if r.status_code == 200:
+        print("TED total:", r.json().get("total", "ni podatka"))
+    if r.status_code == 200:
         data = r.json()
         notices = data.get("results") or data.get("notices") or []
         ted_new = 0
