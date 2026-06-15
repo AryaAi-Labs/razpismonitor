@@ -384,21 +384,10 @@ except Exception as e:
 
 
 # ── Zapisi v GitHub repo (data/razpisi.json) ─────────────────────
-print("=== Shranjujem {} razpisov v GitHub repo ===".format(len(razpisi)))
-
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 GITHUB_OWNER = "AryaAi-Labs"
 GITHUB_REPO  = "razpismonitor"
 GITHUB_FILE  = "data/razpisi.json"
-
-payload_data = {
-    "scraped_at": datetime.now().isoformat(),
-    "count": len(razpisi),
-    "razpisi": razpisi,
-}
-content_b64 = base64.b64encode(
-    json.dumps(payload_data, ensure_ascii=False, indent=2).encode("utf-8")
-).decode("ascii")
 
 api_url = "https://api.github.com/repos/{}/{}/contents/{}".format(
     GITHUB_OWNER, GITHUB_REPO, GITHUB_FILE
@@ -408,6 +397,31 @@ gh_headers = {
     "Accept": "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
 }
+
+# Preberi stare external_id-je iz prejšnjega JSON-a (PRED write)
+stari_ids = set()
+try:
+    get_old = requests.get(api_url, headers=gh_headers, timeout=15)
+    if get_old.status_code == 200:
+        old_content = base64.b64decode(get_old.json().get("content", "")).decode("utf-8")
+        old_data = json.loads(old_content)
+        stari_ids = set(r["external_id"] for r in old_data.get("razpisi", []))
+except Exception as e:
+    print("  Napaka pri branju starih ID-jev: {}".format(e))
+
+novi_razpisi = [r for r in razpisi if r["external_id"] not in stari_ids]
+print("  Novih razpisov: {}".format(len(novi_razpisi)))
+
+print("=== Shranjujem {} razpisov v GitHub repo ===".format(len(razpisi)))
+
+payload_data = {
+    "scraped_at": datetime.now().isoformat(),
+    "count": len(razpisi),
+    "razpisi": razpisi,
+}
+content_b64 = base64.b64encode(
+    json.dumps(payload_data, ensure_ascii=False, indent=2).encode("utf-8")
+).decode("ascii")
 
 try:
     get_r = requests.get(api_url, headers=gh_headers, timeout=15)
@@ -433,8 +447,10 @@ except Exception as e:
     print("GitHub write napaka: {}".format(e))
     raise SystemExit(1)
 
-if razpisi:
-    print("  Posiljam email za {} razpisov...".format(len(razpisi)))
-    poslji_email(razpisi)
+if novi_razpisi:
+    print("  Posiljam email za {} novih razpisov...".format(len(novi_razpisi)))
+    poslji_email(novi_razpisi)
+else:
+    print("  Ni novih razpisov, email ni poslan.")
 
 print("=== KONEC ===")
