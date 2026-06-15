@@ -319,7 +319,7 @@ try:
         ted_url,
         json={
             "query": "FT=bolts OR FT=nuts OR FT=fasteners OR FT=screws OR FT=washers",
-            "fields": ["publication-number", "title", "contracting-authority-name", "deadline-date", "country"],
+            "fields": ["publication-number", "title-lot", "buyer-name", "submission-deadline-lot", "place-of-performance-country"],
             "limit": 50,
             "page": 1,
             "onlyLatestVersions": True
