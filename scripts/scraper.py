@@ -318,7 +318,7 @@ try:
     r = requests.post(
         ted_url,
         json={
-            "query": "BT-5131-Part=44315400 OR BT-5131-Part=44315300 OR BT-5131-Part=44316000 OR BT-5131-Part=44532000 OR BT-5131-Part=44533000",
+            "query": "FT ~ \"bolt*\" AND notice-type = (cn-standard) AND PD >= 20260101",
             "fields": ["publication-number", "OPP-021-Contract", "BT-5131-Part", "deadline-receipt-tender-date-lot", "organisation-country-buyer", "description-glo"],
             "limit": 50,
             "page": 1,
@@ -328,8 +328,6 @@ try:
         timeout=30
     )
     print("TED search HTTP {}".format(r.status_code))
-    if r.status_code == 200:
-        print("TED RAW:", r.text[:500])
     if r.status_code == 200:
         data = r.json()
         notices = data.get("results") or data.get("notices") or []
