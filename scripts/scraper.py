@@ -19,7 +19,7 @@ GMAIL_USER = os.environ.get("GMAIL_USER", "")
 GMAIL_PASS = os.environ.get("GMAIL_APP_PASS", "")
 
 EMAIL_PREJEMNIKI = [
-    "burja.tilen@kovinocrom.si",
+    "tilen.burja@kovinocrom.si",
     "ploncaric@gmail.com",
 ]
 
@@ -303,85 +303,58 @@ except Exception as e:
 # ── TED Europa ────────────────────────────────────────────────────
 print("=== TED scraping ===")
 try:
-    payload = {
-        "query":  "PC=44315000 OR PC=44316000 OR PC=44532000 OR PC=44533000",
-        "fields": ["publication-number", "BT-5131-Part", "OPP-021-Contract"],
-        "limit":  100,
-        "page":   1,
+    ted_url = "https://ted.europa.eu/api/v2.0/notices/search"
+    ted_params = {
+        "q": "bolts nuts fasteners screws washers",
+        "fields": "publication-number,title,contracting-authority,deadline-date,notice-type,country",
+        "page": 1,
+        "limit": 50,
+        "sortColumn": "publication-number",
+        "sortOrder": "DESC",
+        "onlyLatestVersions": "true",
+        "scope": "ALL"
     }
-    r = requests.post(
-        "https://api.ted.europa.eu/v3/notices/search",
-        json=payload,
-        headers={**HEADERS, "Content-Type": "application/json"},
-        timeout=30
-    )
-    print("TED v3 POST HTTP {}".format(r.status_code))
-    if r.status_code != 200:
-        print("TED napaka response: {}".format(r.text[:500]))
+
+    r = requests.get(ted_url, params=ted_params, headers=HEADERS, timeout=30)
+    print("TED search HTTP {}".format(r.status_code))
 
     if r.status_code == 200:
         data = r.json()
-        notices = data.get("notices") or []
+        notices = data.get("results") or data.get("notices") or []
         ted_new = 0
-        skipped_old = 0
-        datum_od = date.today() - timedelta(days=30)
 
         for n in notices:
-            pub = n.get("publication-number") or n.get("publicationNumber")
-            if ted_new == 0 and skipped_old < 3:
-                print("  DEBUG pub example: {}".format(pub))
+            pub = n.get("publication-number") or n.get("id") or ""
             if not pub:
                 continue
 
-            # Sprejmi razpise iz let 2025 in 2026 (iz publication-number: NNNNN-YYYY)
-            m = re.search(r'-(\d{4})$', str(pub))
-            if m:
-                year = int(m.group(1))
-                if year < 2025:
-                    skipped_old += 1
-                    continue
+            ext_id = "TED-" + str(pub)
+            title = n.get("title") or "Brez naslova"
+            if isinstance(title, dict):
+                title = title.get("en") or title.get("sl") or list(title.values())[0]
 
-            ext_id = "TED-" + pub
+            country = n.get("country") or ""
+            deadline = n.get("deadline-date") or None
             url = "https://ted.europa.eu/en/notice/{}".format(pub)
 
-            print("  Pridobivam naslov za {}...".format(pub))
-            title = "Brez naslova"
-            try:
-                tr = requests.get(url, headers=HEADERS, timeout=15)
-                if tr.status_code == 200:
-                    tm = re.search(r'<title[^>]*>([^<]+)</title>', tr.text, re.IGNORECASE)
-                    if tm:
-                        t = unescape(tm.group(1).strip())
-                        t = re.sub(r'\s*[|\-]\s*TED.*$', '', t, flags=re.IGNORECASE).strip()
-                        if len(t) > 5:
-                            title = t
-                    if title == "Brez naslova":
-                        hm = re.search(r'<h1[^>]*>([^<]{10,})</h1>', tr.text, re.IGNORECASE)
-                        if hm:
-                            title = unescape(hm.group(1).strip())
-            except Exception as e:
-                print("  Napaka pri naslovu {}: {}".format(pub, e))
-            print("  -> {}".format(title[:60]))
-            time.sleep(1)
-
             razpisi.append({
-                "external_id":   ext_id,
-                "vir":           "TED",
-                "naslov":        title,
-                "narocnik":      None,
-                "cpv_kode":      "44315400-1",
-                "vrednost":      None,
-                "vrednost_eur":  None,
-                "rok_za_oddajo": None,
-                "datum_objave":  date.today().isoformat(),
-                "link":          url,
-                "status":        "odprt",
+                "external_id": ext_id,
+                "vir": "TED",
+                "naslov": title,
+                "narocnik": n.get("contracting-authority") or country or None,
+                "cpv_kode": "",
+                "vrednost": None,
+                "vrednost_eur": None,
+                "rok_za_oddajo": deadline,
+                "datum_objave": date.today().isoformat(),
+                "link": url,
+                "status": "odprt",
             })
             ted_new += 1
 
-        print("TED: {} novih, {} preskocenih (pred 30 dnevi)".format(ted_new, skipped_old))
+        print("TED: {} novih razpisov".format(ted_new))
     else:
-        print("TED preskocen: HTTP {}".format(r.status_code))
+        print("TED napaka: HTTP {} - {}".format(r.status_code, r.text[:200]))
 
 except Exception as e:
     print("TED napaka (preskocen): {}".format(e))
