@@ -19,7 +19,7 @@ GMAIL_USER = os.environ.get("GMAIL_USER", "")
 GMAIL_PASS = os.environ.get("GMAIL_APP_PASS", "")
 
 EMAIL_PREJEMNIKI = [
-    "burja.tilen@kovinocrom.si",
+    "tilen.burja@kovinocrom.si",
     "ploncaric@gmail.com",
 ]
 
@@ -239,6 +239,10 @@ try:
     for row in all_rows:
         cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL | re.IGNORECASE)
         cells = [clean(re.sub(r'<[^>]+>', ' ', c)) for c in cells]
+
+        # DEBUG - pokazi raw HTML vrstice za prvi match
+        if ejn_count == 0:
+            print("DEBUG ROW HTML:", row[:500])
 
         if len(cells) < 3:
             continue
