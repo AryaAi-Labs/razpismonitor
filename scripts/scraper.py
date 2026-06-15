@@ -328,6 +328,7 @@ try:
         timeout=30
     )
     print("TED search HTTP {}".format(r.status_code))
+    print("TED RAW RESPONSE:", r.text[:3000])
 
     if r.status_code == 200:
         data = r.json()
