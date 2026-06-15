@@ -345,14 +345,12 @@ try:
                 country = countries[0]
             title = "Brez naslova"
             try:
-                html_url = "https://ted.europa.eu/en/notice/-/detail/{}".format(pub)
-                tr = requests.get(html_url, headers=HEADERS, timeout=15)
-                if tr.status_code == 200:
-                    tm = re.search(r'<title[^>]*>([^<]+)</title>', tr.text, re.IGNORECASE)
+                xml_url = "https://ted.europa.eu/en/notice/{}/xml".format(pub)
+                xr = requests.get(xml_url, headers=HEADERS, timeout=15)
+                if xr.status_code == 200:
+                    tm = re.search(r'<TITLE[^>]*>\s*<P[^>]*>(.*?)</P>', xr.text, re.DOTALL | re.IGNORECASE)
                     if tm:
-                        t = unescape(tm.group(1).strip())
-                        t = re.sub(r'\s*[|\-]\s*TED.*$', '', t, flags=re.IGNORECASE).strip()
-                        t = re.sub(r'\s*[|\-]\s*European.*$', '', t, flags=re.IGNORECASE).strip()
+                        t = clean(re.sub(r'<[^>]+>', ' ', tm.group(1)))
                         if len(t) > 5:
                             title = t
                 time.sleep(1)
