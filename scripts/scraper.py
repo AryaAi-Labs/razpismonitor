@@ -348,9 +348,9 @@ try:
                 xml_url = "https://ted.europa.eu/en/notice/{}/xml".format(pub)
                 xr = requests.get(xml_url, headers=HEADERS, timeout=15)
                 if xr.status_code == 200:
-                    tm = re.search(r'<TITLE[^>]*>\s*<P[^>]*>(.*?)</P>', xr.text, re.DOTALL | re.IGNORECASE)
+                    tm = re.search(r'<cbc:Title[^>]*>([^<]+)</cbc:Title>', xr.text, re.IGNORECASE)
                     if tm:
-                        t = clean(re.sub(r'<[^>]+>', ' ', tm.group(1)))
+                        t = unescape(tm.group(1).strip())
                         if len(t) > 5:
                             title = t
                 time.sleep(1)
