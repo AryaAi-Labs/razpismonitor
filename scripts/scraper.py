@@ -318,8 +318,8 @@ try:
     r = requests.post(
         ted_url,
         json={
-            "query": "FT=bolts OR FT=nuts OR FT=fasteners OR FT=screws OR FT=washers",
-            "fields": ["publication-number", "OPP-021-Contract", "BT-5131-Part", "deadline-receipt-tender-date-lot", "organisation-country-buyer"],
+            "query": "FT=bolts OR FT=nuts OR FT=fasteners OR FT=screws OR FT=washers AND PD=[20260101 TO 20261231]",
+            "fields": ["publication-number", "OPP-021-Contract", "BT-5131-Part", "deadline-receipt-tender-date-lot", "organisation-country-buyer", "title", "description"],
             "limit": 50,
             "page": 1,
             "onlyLatestVersions": True
@@ -328,7 +328,6 @@ try:
         timeout=30
     )
     print("TED search HTTP {}".format(r.status_code))
-    print("TED RAW RESPONSE:", r.text[:3000])
 
     if r.status_code == 200:
         data = r.json()
