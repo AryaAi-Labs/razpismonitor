@@ -345,11 +345,25 @@ try:
                 continue
 
             ext_id = "TED-" + str(pub)
-            title = n.get("title") or "Brez naslova"
-            if isinstance(title, dict):
-                title = title.get("en") or title.get("sl") or list(title.values())[0]
-
-            country = n.get("country") or ""
+            country = ""
+            countries = n.get("organisation-country-buyer") or []
+            if countries:
+                country = countries[0]
+            title = "Brez naslova"
+            try:
+                html_url = "https://ted.europa.eu/en/notice/{}".format(pub)
+                tr = requests.get(html_url, headers=HEADERS, timeout=15)
+                if tr.status_code == 200:
+                    tm = re.search(r'<title[^>]*>([^<]+)</title>', tr.text, re.IGNORECASE)
+                    if tm:
+                        t = unescape(tm.group(1).strip())
+                        t = re.sub(r'\s*[|\-]\s*TED.*$', '', t, flags=re.IGNORECASE).strip()
+                        t = re.sub(r'\s*[|\-]\s*European.*$', '', t, flags=re.IGNORECASE).strip()
+                        if len(t) > 5:
+                            title = t
+                time.sleep(1)
+            except Exception as e:
+                print("  Napaka pri naslovu {}: {}".format(pub, e))
             deadline = n.get("deadline-date") or None
             url = "https://ted.europa.eu/en/notice/{}".format(pub)
 
