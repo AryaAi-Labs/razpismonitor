@@ -303,7 +303,7 @@ except Exception as e:
 # ── TED Europa ────────────────────────────────────────────────────
 print("=== TED scraping ===")
 try:
-    ted_url = "https://ted.europa.eu/api/v2.0/notices/search"
+    ted_url = "https://ted.europa.eu/api/v3.0/notices/search"
     ted_params = {
         "q": "bolts nuts fasteners screws washers",
         "fields": "publication-number,title,contracting-authority,deadline-date,notice-type,country",
