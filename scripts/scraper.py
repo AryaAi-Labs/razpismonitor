@@ -303,7 +303,7 @@ except Exception as e:
 # ── TED Europa ────────────────────────────────────────────────────
 print("=== TED scraping ===")
 try:
-    ted_url = "https://ted.europa.eu/api/v3.0/notices/search"
+    ted_url = "https://api.ted.europa.eu/v3/notices/search"
     ted_params = {
         "q": "bolts nuts fasteners screws washers",
         "fields": "publication-number,title,contracting-authority,deadline-date,notice-type,country",
@@ -315,7 +315,18 @@ try:
         "scope": "ALL"
     }
 
-    r = requests.get(ted_url, params=ted_params, headers=HEADERS, timeout=30)
+    r = requests.post(
+        ted_url,
+        json={
+            "query": "FT=bolts OR FT=nuts OR FT=fasteners OR FT=screws OR FT=washers",
+            "fields": ["publication-number", "title", "contracting-authority-name", "deadline-date", "country"],
+            "limit": 50,
+            "page": 1,
+            "onlyLatestVersions": True
+        },
+        headers={**HEADERS, "Content-Type": "application/json"},
+        timeout=30
+    )
     print("TED search HTTP {}".format(r.status_code))
 
     if r.status_code == 200:
