@@ -1,5 +1,5 @@
 {
-  "scraped_at": "2026-06-15T13:00:57.159685",
+  "scraped_at": "2026-06-15T13:10:16.646891",
   "count": 3,
   "razpisi": [
     {
@@ -12,7 +12,7 @@
       "vrednost_eur": null,
       "rok_za_oddajo": "2026-07-08",
       "datum_objave": "2026-06-05",
-      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila.xhtml?oznakaJN=JN-74450",
+      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila_podrobnosti.xhtml?zadevaId=JN004464%2F2026-EUe16%2F01",
       "status": "odprt"
     },
     {
@@ -25,7 +25,7 @@
       "vrednost_eur": null,
       "rok_za_oddajo": "2026-07-03",
       "datum_objave": "2026-05-22",
-      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila.xhtml?oznakaJN=JN 07/2026 (JN-73917)",
+      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila_podrobnosti.xhtml?zadevaId=JN003993%2F2026-EUe16%2F01",
       "status": "odprt"
     },
     {
@@ -38,7 +38,7 @@
       "vrednost_eur": null,
       "rok_za_oddajo": "2026-07-17",
       "datum_objave": "2026-06-15",
-      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila.xhtml?oznakaJN=JN-75337",
+      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila_podrobnosti.xhtml?zadevaId=JN004737%2F2026-EUe16%2F01",
       "status": "odprt"
     }
   ]
