@@ -365,7 +365,7 @@ try:
 
         print("TED: {} novih razpisov".format(ted_new))
     else:
-        print("TED napaka: HTTP {} - {}".format(r.status_code, r.text[:200]))
+        print("TED napaka: HTTP {} - {}".format(r.status_code, r.text[:2000]))
 
 except Exception as e:
     print("TED napaka (preskocen): {}".format(e))
