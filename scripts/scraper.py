@@ -270,14 +270,14 @@ try:
             continue
         seen_ext_ids.add(ext_id)
 
-        import urllib.parse
-        jn_stevilka = cells[5].strip() if len(cells) > 5 else ""
-        if jn_stevilka:
-            link = "https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila_podrobnosti.xhtml?zadevaId={}".format(
-                urllib.parse.quote(jn_stevilka, safe="")
-            )
+        zadeva_id = ""
+        id_match = re.search(r'JN-(\d+)', oznaka)
+        if id_match:
+            zadeva_id = id_match.group(1)
+        if zadeva_id:
+            link = "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml?zadevaId={}".format(zadeva_id)
         else:
-            link = "https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila.xhtml?oznakaJN={}".format(oznaka)
+            link = "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml"
 
         razpisi.append({
             "external_id":   ext_id,
