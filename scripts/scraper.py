@@ -240,10 +240,6 @@ try:
         cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL | re.IGNORECASE)
         cells = [clean(re.sub(r'<[^>]+>', ' ', c)) for c in cells]
 
-        # DEBUG - pokazi raw HTML vrstice za prvi match
-        if ejn_count == 0:
-            print("DEBUG ROW HTML:", row[:500])
-
         if len(cells) < 3:
             continue
 
@@ -274,13 +270,12 @@ try:
             continue
         seen_ext_ids.add(ext_id)
 
-        link_match = re.search(
-            r'href="([^"]*aktualna_javna_narocila[^"]*narociloId[^"]*)"',
-            row, re.IGNORECASE
-        )
-        if link_match:
-            href = link_match.group(1)
-            link = ("https://ejn.gov.si" + href) if href.startswith("/") else href
+        import urllib.parse
+        jn_stevilka = cells[5].strip() if len(cells) > 5 else ""
+        if jn_stevilka:
+            link = "https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila_podrobnosti.xhtml?zadevaId={}".format(
+                urllib.parse.quote(jn_stevilka, safe="")
+            )
         else:
             link = "https://ejn.gov.si/ponudba/pages/aktualno/aktualna_javna_narocila.xhtml?oznakaJN={}".format(oznaka)
 
