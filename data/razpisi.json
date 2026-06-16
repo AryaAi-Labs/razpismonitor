@@ -1,31 +1,18 @@
 {
-  "scraped_at": "2026-06-16T05:00:21.670406",
-  "count": 2,
+  "scraped_at": "2026-06-16T19:00:03.968508",
+  "count": 1,
   "razpisi": [
     {
-      "external_id": "EJN-JN-74450",
+      "external_id": "EJN-JN-75460",
       "vir": "e-JN",
-      "naslov": "Sukcesivna dobava konvencionalnih živil in živil iz shem kakovosti",
-      "narocnik": "JAVNI ZAVOD OTROŠKI VRTEC ŠMARJE PRI JELŠAH",
+      "naslov": "Sukcesivna dobava zdravil",
+      "narocnik": "ZDRAVSTVENI DOM LAŠKO",
       "cpv_kode": "",
       "vrednost": null,
       "vrednost_eur": null,
-      "rok_za_oddajo": "2026-07-08",
-      "datum_objave": "2026-06-05",
-      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml?zadevaId=74450",
-      "status": "odprt"
-    },
-    {
-      "external_id": "EJN-JN_07_2026__JN-73917_",
-      "vir": "e-JN",
-      "naslov": "Najem dializnih aparatov, vzdrževanje in pripadajoči dializni potrošni material za obdobje 7 let",
-      "narocnik": "SPLOŠNA BOLNIŠNICA JESENICE",
-      "cpv_kode": "",
-      "vrednost": null,
-      "vrednost_eur": null,
-      "rok_za_oddajo": "2026-07-03",
-      "datum_objave": "2026-05-22",
-      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml?zadevaId=73917",
+      "rok_za_oddajo": "2026-06-22",
+      "datum_objave": "2026-06-16",
+      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml?zadevaId=75460",
       "status": "odprt"
     }
   ]
