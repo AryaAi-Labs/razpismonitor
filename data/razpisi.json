@@ -1,6 +1,6 @@
 {
-  "scraped_at": "2026-06-15T21:49:59.036523",
-  "count": 3,
+  "scraped_at": "2026-06-16T05:00:21.670406",
+  "count": 2,
   "razpisi": [
     {
       "external_id": "EJN-JN-74450",
@@ -26,19 +26,6 @@
       "rok_za_oddajo": "2026-07-03",
       "datum_objave": "2026-05-22",
       "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml?zadevaId=73917",
-      "status": "odprt"
-    },
-    {
-      "external_id": "EJN-JN-75337",
-      "vir": "e-JN",
-      "naslov": "Sukcesivna dobava potrošnega materiala za interventno kardiologijo in angiologijo ter žilnih opornic - ponovitev",
-      "narocnik": "SPLOŠNA BOLNIŠNICA IZOLA OSPEDALE GENERALE ISOLA",
-      "cpv_kode": "",
-      "vrednost": null,
-      "vrednost_eur": null,
-      "rok_za_oddajo": "2026-07-17",
-      "datum_objave": "2026-06-15",
-      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml?zadevaId=75337",
       "status": "odprt"
     }
   ]
