@@ -279,8 +279,6 @@ try:
         else:
             link = "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml"
 
-        print("  DEBUG cells za '{}': {}".format(naziv[:40], cells))
-
         razpisi.append({
             "external_id":   ext_id,
             "vir":           "e-JN",
