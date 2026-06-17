@@ -19,7 +19,7 @@ GMAIL_USER = os.environ.get("GMAIL_USER", "")
 GMAIL_PASS = os.environ.get("GMAIL_APP_PASS", "")
 
 EMAIL_PREJEMNIKI = [
-    "burja.tilen@kovinocrom.si",
+    "tilen.burja@kovinocrom.si",
     "ploncaric@gmail.com",
 ]
 
@@ -278,6 +278,8 @@ try:
             link = "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml?zadevaId={}".format(zadeva_id)
         else:
             link = "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml"
+
+        print("  DEBUG cells za '{}': {}".format(naziv[:40], cells))
 
         razpisi.append({
             "external_id":   ext_id,
