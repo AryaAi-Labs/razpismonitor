@@ -1,18 +1,18 @@
 {
-  "scraped_at": "2026-06-16T21:48:50.892225",
+  "scraped_at": "2026-06-17T05:00:21.454429",
   "count": 1,
   "razpisi": [
     {
-      "external_id": "EJN-JN-75460",
+      "external_id": "EJN-JN-75470",
       "vir": "e-JN",
-      "naslov": "Sukcesivna dobava zdravil",
-      "narocnik": "ZDRAVSTVENI DOM LAŠKO",
+      "naslov": "REAGENTI IN OSTALI MATERIAL ZA ALIKVOTIRANJE BIOLOŠKIH VZORCEV",
+      "narocnik": "UNIVERZITETNI KLINIČNI CENTER MARIBOR",
       "cpv_kode": "",
       "vrednost": null,
       "vrednost_eur": null,
-      "rok_za_oddajo": "2026-06-22",
-      "datum_objave": "2026-06-16",
-      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml?zadevaId=75460",
+      "rok_za_oddajo": "2026-07-21",
+      "datum_objave": "2026-06-17",
+      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml?zadevaId=75470",
       "status": "odprt"
     }
   ]
