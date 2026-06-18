@@ -19,7 +19,7 @@ GMAIL_USER = os.environ.get("GMAIL_USER", "")
 GMAIL_PASS = os.environ.get("GMAIL_APP_PASS", "")
 
 EMAIL_PREJEMNIKI = [
-    "burja.tilen@kovinocrom.si",
+    "tilen.burja@kovinocrom.si",
     "ploncaric@gmail.com",
 ]
 
@@ -310,6 +310,7 @@ GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 GITHUB_OWNER = "AryaAi-Labs"
 GITHUB_REPO  = "razpismonitor"
 GITHUB_FILE  = "data/razpisi.json"
+GITHUB_SENT_FILE = "data/poslani_ids.json"
 
 api_url = "https://api.github.com/repos/{}/{}/contents/{}".format(
     GITHUB_OWNER, GITHUB_REPO, GITHUB_FILE
@@ -321,15 +322,20 @@ gh_headers = {
 }
 
 # Preberi stare external_id-je iz prejšnjega JSON-a (PRED write)
+sent_url = "https://api.github.com/repos/{}/{}/contents/{}".format(
+    GITHUB_OWNER, GITHUB_REPO, GITHUB_SENT_FILE
+)
 stari_ids = set()
 try:
-    get_old = requests.get(api_url, headers=gh_headers, timeout=15)
+    get_old = requests.get(sent_url, headers=gh_headers, timeout=15)
     if get_old.status_code == 200:
         old_content = base64.b64decode(get_old.json().get("content", "")).decode("utf-8")
-        old_data = json.loads(old_content)
-        stari_ids = set(r["external_id"] for r in old_data.get("razpisi", []))
+        stari_ids = set(json.loads(old_content))
+        print("  Prebranih {} ze poslanih ID-jev".format(len(stari_ids)))
+    else:
+        print("  poslani_ids.json se ne obstaja, bo ustvarjen")
 except Exception as e:
-    print("  Napaka pri branju starih ID-jev: {}".format(e))
+    print("  Napaka pri branju poslanih ID-jev: {}".format(e))
 
 novi_razpisi = [r for r in razpisi if r["external_id"] not in stari_ids]
 print("  Novih razpisov: {}".format(len(novi_razpisi)))
@@ -374,5 +380,26 @@ if novi_razpisi:
     poslji_email(novi_razpisi)
 else:
     print("  Ni novih razpisov, email ni poslan.")
+
+# Posodobi trajno bazo poslanih ID-jev (vedno, ne glede na to ali je bil email poslan)
+vsi_poslani_ids = stari_ids.union(set(r["external_id"] for r in razpisi))
+try:
+    sent_payload = json.dumps(sorted(vsi_poslani_ids), ensure_ascii=False, indent=2)
+    sent_content_b64 = base64.b64encode(sent_payload.encode("utf-8")).decode("ascii")
+    get_sent = requests.get(sent_url, headers=gh_headers, timeout=15)
+    sent_sha = get_sent.json().get("sha") if get_sent.status_code == 200 else None
+    sent_body = {
+        "message": "update poslani_ids.json ({} skupaj)".format(len(vsi_poslani_ids)),
+        "content": sent_content_b64,
+    }
+    if sent_sha:
+        sent_body["sha"] = sent_sha
+    put_sent = requests.put(sent_url, json=sent_body, headers=gh_headers, timeout=30)
+    if put_sent.status_code in (200, 201):
+        print("  Posodobljen poslani_ids.json ({} ID-jev skupaj)".format(len(vsi_poslani_ids)))
+    else:
+        print("  Napaka pri pisanju poslani_ids.json: HTTP {}".format(put_sent.status_code))
+except Exception as e:
+    print("  Napaka pri pisanju poslani_ids.json: {}".format(e))
 
 print("=== KONEC ===")
