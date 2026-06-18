@@ -1,7 +1,20 @@
 {
-  "scraped_at": "2026-06-18T05:00:18.126509",
+  "scraped_at": "2026-06-18T09:12:08.676203",
   "count": 3,
   "razpisi": [
+    {
+      "external_id": "EJN-JN-75628",
+      "vir": "e-JN",
+      "naslov": "Dobava in montaža ORL delovne postaje ter sukcesivna dobava potrošnega materiala - ponovitev",
+      "narocnik": "SPLOŠNA BOLNIŠNICA IZOLA OSPEDALE GENERALE ISOLA",
+      "cpv_kode": "",
+      "vrednost": null,
+      "vrednost_eur": null,
+      "rok_za_oddajo": "2026-07-03",
+      "datum_objave": "2026-06-18",
+      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml?zadevaId=75628",
+      "status": "odprt"
+    },
     {
       "external_id": "EJN-JN-75568",
       "vir": "e-JN",
@@ -26,19 +39,6 @@
       "rok_za_oddajo": "2026-07-27",
       "datum_objave": "2026-06-18",
       "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml?zadevaId=1",
-      "status": "odprt"
-    },
-    {
-      "external_id": "EJN-16-B_NMV_2026",
-      "vir": "e-JN",
-      "naslov": "Dobava jeklenih stebrov",
-      "narocnik": "ELEKTRO PRIMORSKA podjetje za distribucijo električne energije, d.d.",
-      "cpv_kode": "",
-      "vrednost": null,
-      "vrednost_eur": null,
-      "rok_za_oddajo": "2026-07-10",
-      "datum_objave": "2026-06-17",
-      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml",
       "status": "odprt"
     }
   ]
