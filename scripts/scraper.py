@@ -26,7 +26,7 @@ EMAIL_PREJEMNIKI = [
 CPV_KODE = ["44315400", "44315300", "44316000", "44532000", "44533000"]
 
 KLJUCNE_BESEDE = [
-    "vijak", "vijake", "vijakov",
+    "vijak", "vijake", "vijakov", "vijacni", "vijacnega", "vijacno", "vijacna",
     "matica", "matice",
     "podlozk", "podlozke",
     "pritrdilni material", "pritrdilne elemente", "pritrdilnih elementov",
