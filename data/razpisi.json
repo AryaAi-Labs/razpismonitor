@@ -1,5 +1,45 @@
 {
-  "scraped_at": "2026-06-17T15:30:47.111696",
-  "count": 0,
-  "razpisi": []
+  "scraped_at": "2026-06-18T05:00:18.126509",
+  "count": 3,
+  "razpisi": [
+    {
+      "external_id": "EJN-JN-75568",
+      "vir": "e-JN",
+      "naslov": "SUKCESIVNA DOBAVA KONVENCIONALNIH IN EKOLOŠKIH ŽIVIL«",
+      "narocnik": "PROMETNA ŠOLA MARIBOR",
+      "cpv_kode": "",
+      "vrednost": null,
+      "vrednost_eur": null,
+      "rok_za_oddajo": "2026-07-20",
+      "datum_objave": "2026-06-18",
+      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml?zadevaId=75568",
+      "status": "odprt"
+    },
+    {
+      "external_id": "EJN-JN-1_2026",
+      "vir": "e-JN",
+      "naslov": "Sukcesivna dobava prehrambnega blaga (konvencionalna in ekološka živila)",
+      "narocnik": "OSNOVNA ŠOLA LITIJA",
+      "cpv_kode": "",
+      "vrednost": null,
+      "vrednost_eur": null,
+      "rok_za_oddajo": "2026-07-27",
+      "datum_objave": "2026-06-18",
+      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml?zadevaId=1",
+      "status": "odprt"
+    },
+    {
+      "external_id": "EJN-16-B_NMV_2026",
+      "vir": "e-JN",
+      "naslov": "Dobava jeklenih stebrov",
+      "narocnik": "ELEKTRO PRIMORSKA podjetje za distribucijo električne energije, d.d.",
+      "cpv_kode": "",
+      "vrednost": null,
+      "vrednost_eur": null,
+      "rok_za_oddajo": "2026-07-10",
+      "datum_objave": "2026-06-17",
+      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml",
+      "status": "odprt"
+    }
+  ]
 }
