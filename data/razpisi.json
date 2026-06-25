@@ -1,5 +1,19 @@
 {
-  "scraped_at": "2026-06-24T14:30:40.490287",
-  "count": 0,
-  "razpisi": []
+  "scraped_at": "2026-06-25T05:00:26.378502",
+  "count": 1,
+  "razpisi": [
+    {
+      "external_id": "EJN-JN-75995",
+      "vir": "e-JN",
+      "naslov": "Zamenjava SCU in lokalnih SCAD z Unifusion v ENP Rižana, ENP Dekani, ENP Divača, ENP Mala Bukovica, ENP Ptuj",
+      "narocnik": "Slovenske železnice - Infrastruktura, družba za upravljanje in vzdrževanje železniške infrastrukture ter vodenje železniškega prometa, d.o.o.",
+      "cpv_kode": "",
+      "vrednost": null,
+      "vrednost_eur": null,
+      "rok_za_oddajo": "2026-07-09",
+      "datum_objave": "2026-06-24",
+      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml?zadevaId=75995",
+      "status": "odprt"
+    }
+  ]
 }
