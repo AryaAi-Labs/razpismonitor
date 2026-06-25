@@ -19,7 +19,7 @@ GMAIL_USER = os.environ.get("GMAIL_USER", "")
 GMAIL_PASS = os.environ.get("GMAIL_APP_PASS", "")
 
 EMAIL_PREJEMNIKI = [
-    "tilen.burja@kovinocrom.si",
+    "burja.tilen@kovinocrom.si",
     "ploncaric@gmail.com",
 ]
 
