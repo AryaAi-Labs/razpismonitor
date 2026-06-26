@@ -1,7 +1,20 @@
 {
-  "scraped_at": "2026-06-26T05:00:16.771645",
-  "count": 1,
+  "scraped_at": "2026-06-26T08:27:59.564850",
+  "count": 2,
   "razpisi": [
+    {
+      "external_id": "EJN-JN-76006",
+      "vir": "e-JN",
+      "naslov": "Sanacija plazu na nekategorizirani javni cesti Drev, Lokovica 84",
+      "narocnik": "OBČINA ŠOŠTANJ",
+      "cpv_kode": "",
+      "vrednost": null,
+      "vrednost_eur": null,
+      "rok_za_oddajo": "2026-07-16",
+      "datum_objave": "2026-06-26",
+      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml?zadevaId=76006",
+      "status": "odprt"
+    },
     {
       "external_id": "EJN-JN-75995",
       "vir": "e-JN",
