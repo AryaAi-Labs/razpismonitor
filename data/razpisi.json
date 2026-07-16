@@ -1,5 +1,19 @@
 {
-  "scraped_at": "2026-07-16T05:00:17.922597",
-  "count": 0,
-  "razpisi": []
+  "scraped_at": "2026-07-16T07:20:47.932610",
+  "count": 1,
+  "razpisi": [
+    {
+      "external_id": "EJN-43001-148_2026",
+      "vir": "e-JN",
+      "naslov": "Ureditev ceste skozi Lukovico in Šentožbolt",
+      "narocnik": "MINISTRSTVO ZA INFRASTRUKTURO, DIREKCIJA REPUBLIKE SLOVENIJE ZA INFRASTRUKTURO",
+      "cpv_kode": "",
+      "vrednost": null,
+      "vrednost_eur": null,
+      "rok_za_oddajo": "2026-08-28",
+      "datum_objave": "2026-07-16",
+      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml",
+      "status": "odprt"
+    }
+  ]
 }
