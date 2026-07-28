@@ -1,5 +1,32 @@
 {
-  "scraped_at": "2026-07-28T07:35:28.711045",
-  "count": 0,
-  "razpisi": []
+  "scraped_at": "2026-07-28T14:05:42.646380",
+  "count": 2,
+  "razpisi": [
+    {
+      "external_id": "EJN-JN-77461",
+      "vir": "e-JN",
+      "naslov": "Rekonstrukcija ceste LC480281 Medija – Blagovica (cesta Vranke), faza I.",
+      "narocnik": "OBČINA LUKOVICA",
+      "cpv_kode": "",
+      "vrednost": null,
+      "vrednost_eur": null,
+      "rok_za_oddajo": "2026-08-07",
+      "datum_objave": "2026-07-28",
+      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml?zadevaId=77461",
+      "status": "odprt"
+    },
+    {
+      "external_id": "EJN-JN-77463",
+      "vir": "e-JN",
+      "naslov": "Rekonstrukcija ceste LC235031 Krašnja – Blagovica, odsek Krašnja – Krajno Brdo, faza III.",
+      "narocnik": "OBČINA LUKOVICA",
+      "cpv_kode": "",
+      "vrednost": null,
+      "vrednost_eur": null,
+      "rok_za_oddajo": "2026-08-07",
+      "datum_objave": "2026-07-28",
+      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml?zadevaId=77463",
+      "status": "odprt"
+    }
+  ]
 }
