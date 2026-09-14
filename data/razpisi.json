@@ -1,19 +1,5 @@
 {
-  "scraped_at": "2026-09-13T15:41:58.710488",
-  "count": 1,
-  "razpisi": [
-    {
-      "external_id": "EJN-43012-4_2026",
-      "vir": "e-JN",
-      "naslov": "Celovita idejna zasnova porečja Zlatopoljščice s pritoki v občini Lukovica",
-      "narocnik": "Ministrstvo za okolje in prostor, Direkcija Republike Slovenije za vode",
-      "cpv_kode": "",
-      "vrednost": null,
-      "vrednost_eur": null,
-      "rok_za_oddajo": "2026-09-25",
-      "datum_objave": "2026-09-10",
-      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml",
-      "status": "odprt"
-    }
-  ]
+  "scraped_at": "2026-09-14T05:00:15.655180",
+  "count": 0,
+  "razpisi": []
 }
