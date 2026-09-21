@@ -1,19 +1,5 @@
 {
-  "scraped_at": "2026-09-21T10:22:31.156285",
-  "count": 1,
-  "razpisi": [
-    {
-      "external_id": "EJN-JN-79686",
-      "vir": "e-JN",
-      "naslov": "VH Zabukovica Pisker - gradnja",
-      "narocnik": "JAVNO KOMUNALNO PODJETJE ŽALEC, d.o.o.",
-      "cpv_kode": "",
-      "vrednost": null,
-      "vrednost_eur": null,
-      "rok_za_oddajo": "2026-09-24",
-      "datum_objave": "2026-09-18",
-      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml?zadevaId=79686",
-      "status": "odprt"
-    }
-  ]
+  "scraped_at": "2026-09-21T17:55:27.794060",
+  "count": 0,
+  "razpisi": []
 }
