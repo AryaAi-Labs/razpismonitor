@@ -1,5 +1,19 @@
 {
-  "scraped_at": "2026-10-06T17:59:07.581357",
-  "count": 0,
-  "razpisi": []
+  "scraped_at": "2026-10-07T05:00:18.153226",
+  "count": 1,
+  "razpisi": [
+    {
+      "external_id": "EJN-430-50_2026",
+      "vir": "e-JN",
+      "naslov": "Izgradnja komunalne infrastrukture Hrastje, Veliki hrib in Gorenja Sava-Rakovica, z upoštevanjem okoljskih vidikov",
+      "narocnik": "MESTNA OBČINA KRANJ",
+      "cpv_kode": "",
+      "vrednost": null,
+      "vrednost_eur": null,
+      "rok_za_oddajo": "2026-11-10",
+      "datum_objave": "2026-10-07",
+      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml",
+      "status": "odprt"
+    }
+  ]
 }
