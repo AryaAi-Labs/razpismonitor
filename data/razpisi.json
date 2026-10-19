@@ -1,5 +1,19 @@
 {
-  "scraped_at": "2026-10-19T10:28:32.234394",
-  "count": 0,
-  "razpisi": []
+  "scraped_at": "2026-10-19T18:23:52.248717",
+  "count": 1,
+  "razpisi": [
+    {
+      "external_id": "EJN-JN-81176",
+      "vir": "e-JN",
+      "naslov": "Strokovni nadzor »izgradnje VH Zabukovica Pisker«",
+      "narocnik": "JAVNO KOMUNALNO PODJETJE ŽALEC, d.o.o.",
+      "cpv_kode": "",
+      "vrednost": null,
+      "vrednost_eur": null,
+      "rok_za_oddajo": "2026-10-23",
+      "datum_objave": "2026-10-19",
+      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml?zadevaId=81176",
+      "status": "odprt"
+    }
+  ]
 }
