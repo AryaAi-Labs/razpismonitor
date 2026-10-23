@@ -1,19 +1,5 @@
 {
-  "scraped_at": "2026-10-23T09:43:12.952016",
-  "count": 1,
-  "razpisi": [
-    {
-      "external_id": "EJN-08-27_2026",
-      "vir": "e-JN",
-      "naslov": "Ureditev zadrževalnika na Brdu pri Lukovici z dobavo in montažo tehnološke opreme",
-      "narocnik": "KMETIJSKI INŠTITUT SLOVENIJE",
-      "cpv_kode": "",
-      "vrednost": null,
-      "vrednost_eur": null,
-      "rok_za_oddajo": "2026-10-30",
-      "datum_objave": "2026-10-22",
-      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml",
-      "status": "odprt"
-    }
-  ]
+  "scraped_at": "2026-10-23T16:33:08.777153",
+  "count": 0,
+  "razpisi": []
 }
