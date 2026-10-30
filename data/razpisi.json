@@ -1,19 +1,5 @@
 {
-  "scraped_at": "2026-10-30T05:00:18.083022",
-  "count": 1,
-  "razpisi": [
-    {
-      "external_id": "EJN-26-01136",
-      "vir": "e-JN",
-      "naslov": "Izvedba strokovnega nadzora in varstva pri delu pri projektu: Izgradnja komunalne infrastrukture Hrastje, Veliki hrib in Gorenja Sava – Rakovica, z upoštevanjem okoljskih vidikov",
-      "narocnik": "MESTNA OBČINA KRANJ",
-      "cpv_kode": "",
-      "vrednost": null,
-      "vrednost_eur": null,
-      "rok_za_oddajo": "2026-11-30",
-      "datum_objave": "2026-10-29",
-      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml",
-      "status": "odprt"
-    }
-  ]
+  "scraped_at": "2026-10-30T11:09:08.598623",
+  "count": 0,
+  "razpisi": []
 }
