@@ -1,5 +1,19 @@
 {
-  "scraped_at": "2026-11-05T19:33:32.922250",
-  "count": 0,
-  "razpisi": []
+  "scraped_at": "2026-11-06T05:00:17.192428",
+  "count": 1,
+  "razpisi": [
+    {
+      "external_id": "EJN-JN-82015",
+      "vir": "e-JN",
+      "naslov": "Nakup gasilskega vozila GVC-3",
+      "narocnik": "PROSTOVOLJNO GASILSKO DRUŠTVO ZABUKOVICA",
+      "cpv_kode": "",
+      "vrednost": null,
+      "vrednost_eur": null,
+      "rok_za_oddajo": "2026-12-04",
+      "datum_objave": "2026-11-06",
+      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml?zadevaId=82015",
+      "status": "odprt"
+    }
+  ]
 }
