@@ -1,5 +1,19 @@
 {
-  "scraped_at": "2026-11-15T18:30:51.631702",
-  "count": 0,
-  "razpisi": []
+  "scraped_at": "2026-11-16T05:00:23.001241",
+  "count": 1,
+  "razpisi": [
+    {
+      "external_id": "EJN-JN-82333",
+      "vir": "e-JN",
+      "naslov": "NAKUP GASILSKEGA VOZILA GVC-1",
+      "narocnik": "PROSTOVOLJNO GASILSKO DRUŠTVO LOKOVICA",
+      "cpv_kode": "",
+      "vrednost": null,
+      "vrednost_eur": null,
+      "rok_za_oddajo": "2026-12-16",
+      "datum_objave": "2026-11-16",
+      "link": "https://ejn.gov.si/ponudba/pages/aktualno/aktualno_jnc_podrobno.xhtml?zadevaId=82333",
+      "status": "odprt"
+    }
+  ]
 }
